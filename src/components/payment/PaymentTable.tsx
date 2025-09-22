@@ -13,27 +13,30 @@ const PaymentTable = ({ payments }: Props) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Handle search
+  // Search
   const filteredPayments = useMemo(() => {
-    return payments.filter((p) =>
-      p.content.toLowerCase().includes(search.toLowerCase())
+    return payments.filter(
+      (p) =>
+        p.ordersId.toLowerCase().includes(search.toLowerCase()) ||
+        p.method.toLowerCase().includes(search.toLowerCase()) ||
+        p.status.toLowerCase().includes(search.toLowerCase())
     );
   }, [payments, search]);
 
-  // Handle sorting
+  // Sort
   const sortedPayments = useMemo(() => {
     if (!sortField) return filteredPayments;
     return [...filteredPayments].sort((a, b) => {
-      const aValue = sortField === "created_date" ? new Date(a[sortField]).getTime() : a[sortField];
-      const bValue = sortField === "created_date" ? new Date(b[sortField]).getTime() : b[sortField];
-      
-      if (aValue < bValue) return sortOrder === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortOrder === "asc" ? 1 : -1;
+      const aValue = a[sortField];
+      const bValue = b[sortField];
+
+      if (aValue! < bValue!) return sortOrder === "asc" ? -1 : 1;
+      if (aValue! > bValue!) return sortOrder === "asc" ? 1 : -1;
       return 0;
     });
   }, [filteredPayments, sortField, sortOrder]);
 
-  // Handle pagination
+  // Pagination
   const totalPages = Math.ceil(sortedPayments.length / itemsPerPage);
   const paginatedPayments = sortedPayments.slice(
     (currentPage - 1) * itemsPerPage,
@@ -51,33 +54,37 @@ const PaymentTable = ({ payments }: Props) => {
 
   return (
     <div className="space-y-6">
-      {/* Search Bar */}
+      {/* Search */}
       <div className="flex justify-end">
-  <div className="relative w-full max-w-xs">
-    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-    <input
-      type="text"
-      placeholder="Search by content..."
-      value={search}
-      onChange={(e) => setSearch(e.target.value)}
-      className="w-full pl-10 p-2 rounded-lg border border-green-200 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm text-gray-700"
-    />
-  </div>
-</div>
+        <div className="relative w-full max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <input
+            type="text"
+            placeholder="Search by Order ID, Method, Status..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 p-2 rounded-lg border border-green-200 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm text-gray-700"
+          />
+        </div>
+      </div>
 
       {/* Table */}
       <div className="overflow-x-auto shadow-xl rounded-xl bg-white">
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-green-600 text-white">
-              <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide">ID</th>
+              <th
+                className="p-4 text-left text-sm font-semibold uppercase tracking-wide cursor-pointer hover:bg-green-700"
+                onClick={() => handleSort("ordersId")}
+              >
+                Order ID {sortField === "ordersId" && (sortOrder === "asc" ? "↑" : "↓")}
+              </th>
               <th
                 className="p-4 text-left text-sm font-semibold uppercase tracking-wide cursor-pointer hover:bg-green-700"
                 onClick={() => handleSort("amount")}
               >
                 Amount {sortField === "amount" && (sortOrder === "asc" ? "↑" : "↓")}
               </th>
-              <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide">Content</th>
               <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide">Method</th>
               <th
                 className="p-4 text-left text-sm font-semibold uppercase tracking-wide cursor-pointer hover:bg-green-700"
@@ -85,29 +92,28 @@ const PaymentTable = ({ payments }: Props) => {
               >
                 Status {sortField === "status" && (sortOrder === "asc" ? "↑" : "↓")}
               </th>
-              <th
-                className="p-4 text-left text-sm font-semibold uppercase tracking-wide cursor-pointer hover:bg-green-700"
-                onClick={() => handleSort("created_date")}
-              >
-                Created Date {sortField === "created_date" && (sortOrder === "asc" ? "↑" : "↓")}
-              </th>
+              <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide">QR Code</th>
             </tr>
           </thead>
           <tbody>
             {paginatedPayments.map((p, index) => (
               <tr
-                key={p.id}
+                key={`${p.ordersId}-${index}`}
                 className={`${
                   index % 2 === 0 ? "bg-green-50/50" : "bg-white"
-                } hover:bg-green-100/70 transition-all duration-200 ease-in-out transform hover:scale-[1.002]`}
+                } hover:bg-green-100/70 transition-all duration-200`}
               >
-                <td className="p-4 text-sm text-gray-800 font-medium border-b border-green-100">{p.id}</td>
+                <td className="p-4 text-sm text-gray-800 font-medium border-b border-green-100">
+                  {p.ordersId}
+                </td>
                 <td className="p-4 text-sm text-gray-800 border-b border-green-100">
                   <span className="font-semibold text-green-700">
-                    {p.amount.toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                    {p.amount.toLocaleString("vi-VN", {
+                      style: "currency",
+                      currency: "VND",
+                    })}
                   </span>
                 </td>
-                <td className="p-4 text-sm text-gray-700 border-b border-green-100">{p.content}</td>
                 <td className="p-4 text-sm text-gray-700 border-b border-green-100">{p.method}</td>
                 <td className="p-4 text-sm border-b border-green-100">
                   <span
@@ -123,13 +129,13 @@ const PaymentTable = ({ payments }: Props) => {
                   </span>
                 </td>
                 <td className="p-4 text-sm text-gray-700 border-b border-green-100">
-                  {new Date(p.created_date).toLocaleDateString("vi-VN", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {p.qrCode ? (
+                    <a href={p.qrCode} target="_blank" rel="noopener noreferrer">
+                      <img src={p.qrCode} alt="QR" className="w-12 h-12 object-contain" />
+                    </a>
+                  ) : (
+                    <span className="text-gray-400 italic">N/A</span>
+                  )}
                 </td>
               </tr>
             ))}

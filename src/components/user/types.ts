@@ -3,18 +3,17 @@ export interface User {
     email: string;
     username: string;
     status: string;
-    role_name: string;
-    is_deleted: number;
-    created_date: string;
+    role: string;
+    deleted: number;
 }
 
 export interface Profile {
     id: string;
     avatar: string;
-    full_name: string;
+    fullName: string;
     gender: string;
-    date_of_birth: string;
-    nick_name: string;
-    phone_number: string;
-    user_id: string;
+    dateOfBirth: string;
+    nickName: string;
+    phoneNumber: string;
+    userId: string;
 }

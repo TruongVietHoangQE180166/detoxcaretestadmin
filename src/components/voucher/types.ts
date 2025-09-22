@@ -1,10 +1,10 @@
 export type Voucher = {
   id: number;
   code: string;
-  discount_value: number;
+  discountValue: number;
   image?: string;
-  is_active: boolean;
-  is_percentage: boolean;
-  min_order_value: number;
-  exchange_point: number;
+  active: boolean;
+  percentage: boolean;
+  minOrderValue: number;
+ exchangePoint: number;
 };

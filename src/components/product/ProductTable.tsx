@@ -26,62 +26,58 @@ const ProductTable = ({ products, onEdit, onDelete }: Props) => {
         </thead>
         <tbody>
           {products.map((p, index) => (
-            <tr
-              key={p.id}
-              className={`border-b border-gray-200 hover:bg-green-50/50 transition-colors duration-150 ${
-                index % 2 === 0 ? "bg-gray-50/50" : "bg-white"
-              }`}
-            >
-              <td className="p-4 text-gray-700">{p.id}</td>
+            <tr key={p.id} className="border-t hover:bg-gray-50">
+              <td className="p-4">{index + 1}</td>
               <td className="p-4">
                 <img
                   src={p.image}
                   alt={p.name}
-                  className="w-12 h-12 object-cover rounded-lg shadow"
+                  className="w-12 h-12 object-cover rounded-lg"
                 />
               </td>
-              <td className="p-4 text-gray-900 font-medium">{p.name}</td>
-              <td className="p-4 text-gray-700">
-                {p.typeProduct?.name || "Không rõ"}
+              <td className="p-4">{p.name}</td>
+              <td className="p-4">{p.typeProduct?.name}</td>
+              <td className="p-4">{p.price.toLocaleString()} đ</td>
+              <td className="p-4 text-red-500">
+                {p.salePrice.toLocaleString()} đ
               </td>
-              <td className="p-4 text-gray-700">
-                {p.price.toLocaleString()}đ
-              </td>
-              <td className="p-4 text-green-600 font-semibold">
-                {p.salePrice.toLocaleString()}đ
-              </td>
-              <td className="p-4 text-gray-700">{p.sales}</td>
-              <td className="p-4 flex items-center gap-1">
-                <span className="text-yellow-500">★</span>
-                {p.rating.toFixed(1)}
-              </td>
+              <td className="p-4">{p.sales}</td>
+              <td className="p-4">{p.rating}</td>
               <td className="p-4">
                 {p.isActive ? (
-                  <span className="px-3 py-1 text-sm rounded-full bg-green-100 text-green-700">
-                    Active
+                  <span className="px-2 py-1 bg-green-100 text-green-700 rounded-lg text-sm">
+                    Hoạt động
                   </span>
                 ) : (
-                  <span className="px-3 py-1 text-sm rounded-full bg-red-100 text-red-700">
-                    Stop
+                  <span className="px-2 py-1 bg-gray-200 text-gray-600 rounded-lg text-sm">
+                    Ẩn
                   </span>
                 )}
               </td>
-              <td className="p-4 text-center space-x-3">
+              <td className="p-4 flex justify-center gap-3">
                 <button
                   onClick={() => onEdit(p)}
-                  className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-sm"
+                  className="px-3 py-1 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600"
                 >
                   Sửa
                 </button>
                 <button
                   onClick={() => onDelete(p)}
-                  className="px-4 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 shadow-sm"
+                  className="px-3 py-1 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600"
                 >
                   Xóa
                 </button>
               </td>
             </tr>
           ))}
+
+          {products.length === 0 && (
+            <tr>
+              <td colSpan={10} className="p-6 text-center text-gray-500">
+                Không có sản phẩm nào
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>

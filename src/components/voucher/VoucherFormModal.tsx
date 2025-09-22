@@ -1,26 +1,37 @@
 import { useState } from "react";
-import type { Voucher } from "./types";
+
+import { createVoucher } from "../../services/vouCher";
+import type { IVoucher } from "../../services/vouCher/IVoucher";
+import { useToast } from "../common/ToastContext";
 
 type Props = {
-  voucher: Voucher | null;
-  onSave: (v: Voucher) => void;
+  voucher: IVoucher | null;
+  onSave: (v: IVoucher) => void;
   onClose: () => void;
 };
 
-const VoucherFormModal = ({ voucher, onSave, onClose }: Props) => {
-  const [form, setForm] = useState<Voucher>(
-    voucher || {
-      id: 0,
-      code: "",
-      discount_value: 0,
-      is_active: true,
-      is_percentage: false,
-      min_order_value: 0,
-      exchange_point: 0,
-      image: "",
-    }
-  );
-
+// {
+//   "code": "string",
+//   "discountValue": 0,
+//   "minOrderValue": 0,
+//   "image": "string",
+//   "exchangePoint": 0,
+//   "active": true,
+//   "percentage": true
+// }
+const VoucherFormModal = ({ voucher, onSave
+  , onClose }: Props) => {
+  const [form, setForm] = useState<IVoucher>({
+    code: voucher?.code || "",
+    discountValue: voucher?.discountValue || 0,
+    minOrderValue: voucher?.minOrderValue || 0,
+    image: voucher?.image || "",
+    exchangePoint: voucher?.exchangePoint || 0,
+    active: voucher?.active || false,
+    percentage: voucher?.percentage || false,
+  })
+    
+  const {addToast} = useToast();
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({
@@ -29,14 +40,17 @@ const VoucherFormModal = ({ voucher, onSave, onClose }: Props) => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
-      ...form,
-      discount_value: Number(form.discount_value),
-      min_order_value: Number(form.min_order_value),
-      exchange_point: Number(form.exchange_point),
-    });
+    try {
+      const res = await createVoucher(form);
+      console.log("Voucher created:", res);
+      onSave(res.data);
+      onClose();
+    } catch (error) {
+      addToast(`Lỗi khi tạo voucher ${error?.response?.data.message.messageDetail}`, "error");
+      console.error("Lỗi khi tạo voucher", error);
+    }
   };
 
   return (

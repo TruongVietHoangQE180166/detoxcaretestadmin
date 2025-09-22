@@ -9,7 +9,7 @@ type Props = {
 const OrderTable = ({ orders, onView }: Props) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortField, setSortField] = useState<"created_date" | "total_amount" | "order_status" | "">("");
+  const [sortField, setSortField] = useState<"totalAmount" | "status" | "">("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const ordersPerPage = 5;
 
@@ -17,10 +17,12 @@ const OrderTable = ({ orders, onView }: Props) => {
   const filteredOrders = useMemo(() => {
     if (!searchTerm) return orders;
     const term = searchTerm.toLowerCase();
-    return orders.filter((order) =>
-      order.user_id.toLowerCase().includes(term) ||
-      order.address.toLowerCase().includes(term) ||
-      order.number_phone.toLowerCase().includes(term)
+    return orders.filter(
+      (order) =>
+        order?.userId.toLowerCase().includes(term) ||
+        order?.address.toLowerCase().includes(term) ||
+        order?.numberPhone.toLowerCase().includes(term) ||
+        order?.email.toLowerCase().includes(term)
     );
   }, [orders, searchTerm]);
 
@@ -30,14 +32,21 @@ const OrderTable = ({ orders, onView }: Props) => {
     return [...filteredOrders].sort((a, b) => {
       let aValue = a[sortField];
       let bValue = b[sortField];
-      if (sortField === "total_amount") {
+
+      if (sortField === "totalAmount") {
         aValue = aValue || 0;
         bValue = bValue || 0;
-      } else if (sortField === "created_date") {
-        aValue = aValue ? new Date(aValue).getTime() : 0;
-        bValue = bValue ? new Date(bValue).getTime() : 0;
       }
-      return aValue < bValue ? (sortDirection === "asc" ? -1 : 1) : aValue > bValue ? (sortDirection === "asc" ? 1 : -1) : 0;
+
+      return aValue < bValue
+        ? sortDirection === "asc"
+          ? -1
+          : 1
+        : aValue > bValue
+        ? sortDirection === "asc"
+          ? 1
+          : -1
+        : 0;
     });
   }, [filteredOrders, sortField, sortDirection]);
 
@@ -50,7 +59,7 @@ const OrderTable = ({ orders, onView }: Props) => {
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   // Handle sort
-  const handleSort = (field: "created_date" | "total_amount" | "order_status") => {
+  const handleSort = (field: "totalAmount" | "status") => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -82,7 +91,7 @@ const OrderTable = ({ orders, onView }: Props) => {
           </div>
           <input
             type="text"
-            placeholder="Tìm kiếm theo User ID, Địa chỉ hoặc SĐT..."
+            placeholder="Tìm kiếm theo User ID, Email, Địa chỉ hoặc SĐT..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -100,25 +109,20 @@ const OrderTable = ({ orders, onView }: Props) => {
             <tr className="bg-green-600 text-white">
               <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide">ID</th>
               <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide">User ID</th>
+              <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide">Email</th>
               <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide">Địa chỉ</th>
               <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide">SĐT</th>
               <th
                 className="p-4 text-left text-sm font-semibold uppercase tracking-wide cursor-pointer hover:bg-green-700 transition-colors duration-150"
-                onClick={() => handleSort("order_status")}
+                onClick={() => handleSort("status")}
               >
-                Trạng thái {sortField === "order_status" && (sortDirection === "asc" ? "↑" : "↓")}
+                Trạng thái {sortField === "status" && (sortDirection === "asc" ? "↑" : "↓")}
               </th>
               <th
                 className="p-4 text-left text-sm font-semibold uppercase tracking-wide cursor-pointer hover:bg-green-700 transition-colors duration-150"
-                onClick={() => handleSort("total_amount")}
+                onClick={() => handleSort("totalAmount")}
               >
-                Tổng tiền {sortField === "total_amount" && (sortDirection === "asc" ? "↑" : "↓")}
-              </th>
-              <th
-                className="p-4 text-left text-sm font-semibold uppercase tracking-wide cursor-pointer hover:bg-green-700 transition-colors duration-150"
-                onClick={() => handleSort("created_date")}
-              >
-                Ngày tạo {sortField === "created_date" && (sortDirection === "asc" ? "↑" : "↓")}
+                Tổng tiền {sortField === "totalAmount" && (sortDirection === "asc" ? "↑" : "↓")}
               </th>
               <th className="p-4 text-center text-sm font-semibold uppercase tracking-wide">Hành động</th>
             </tr>
@@ -129,39 +133,30 @@ const OrderTable = ({ orders, onView }: Props) => {
                 key={order.id}
                 className={`${
                   index % 2 === 0 ? "bg-green-50/50" : "bg-white"
-                } hover:bg-green-100/70 transition-all duration-200 ease-in-out transform hover:scale-[1.002] borderвью
-                `}
+                } hover:bg-green-100/70 transition-all duration-200 ease-in-out transform hover:scale-[1.002]`}
               >
-                <td className="p-4 text-sm text-gray-800 font-medium border-b border-green-100">{order.id}</td>
-                <td className="p-4 text-sm text-gray-700 border-b border-green-100">{order.user_id}</td>
-                <td className="p-4 text-sm text-gray-700 border-b border-green-100">{order.address}</td>
-                <td className="p-4 text-sm text-gray-700 border-b border-green-100">{order.number_phone}</td>
+                <td className="p-4 text-sm text-gray-800 font-medium border-b border-green-100">{order?.id}</td>
+                <td className="p-4 text-sm text-gray-700 border-b border-green-100">{order?.userId}</td>
+                <td className="p-4 text-sm text-gray-700 border-b border-green-100">{order?.email}</td>
+                <td className="p-4 text-sm text-gray-700 border-b border-green-100">{order?.address}</td>
+                <td className="p-4 text-sm text-gray-700 border-b border-green-100">{order?.numberPhone}</td>
                 <td className="p-4 text-sm border-b border-green-100">
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      order.order_status === "COMPLETED"
+                      order?.status === "COMPLETED"
                         ? "bg-green-200 text-green-900"
-                        : order.order_status === "PENDING"
+                        : order?.status === "PENDING"
                         ? "bg-yellow-200 text-yellow-900"
-                        : "bg-red-200 text-red-900"
+                        : "bg-gray-200 text-gray-900"
                     }`}
                   >
-                    {order.order_status}
+                    {order?.status ?? "Chưa xác định"}
                   </span>
                 </td>
                 <td className="p-4 text-sm text-gray-700 border-b border-green-100">
                   <span className="font-semibold text-green-700">
-                    {order.total_amount.toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                    {order?.totalAmount.toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
                   </span>
-                </td>
-                <td className="p-4 text-sm text-gray-700 border-b border-green-100">
-                  {new Date(order.created_date).toLocaleDateString("vi-VN", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
                 </td>
                 <td className="p-4 text-center border-b border-green-100">
                   <button

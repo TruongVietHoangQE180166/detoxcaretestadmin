@@ -44,7 +44,6 @@ const UserTable = ({ users }: Props) => {
               <th className="p-4 border-b font-semibold text-gray-700 text-sm uppercase">Status</th>
               <th className="p-4 border-b font-semibold text-gray-700 text-sm uppercase">Role</th>
               <th className="p-4 border-b font-semibold text-gray-700 text-sm uppercase">Deleted</th>
-              <th className="p-4 border-b font-semibold text-gray-700 text-sm uppercase">Created Date</th>
               <th className="p-4 border-b font-semibold text-gray-700 text-sm uppercase text-center">Hành động</th>
             </tr>
           </thead>
@@ -61,15 +60,14 @@ const UserTable = ({ users }: Props) => {
                     {u.status}
                   </span>
                 </td>
-                <td className="p-4 border-b text-gray-700 text-sm">{u.role_name}</td>
+                <td className="p-4 border-b text-gray-700 text-sm">{u.role}</td>
                 <td className="p-4 border-b">
-                  <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${u.is_deleted ? 'bg-red-100' : 'bg-green-100'}`}>
-                    <span className={`text-xs font-bold ${u.is_deleted ? 'text-red-600' : 'text-green-600'}`}>
-                      {u.is_deleted ? "Yes" : "No"}
+                  <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${u.deleted ? 'bg-red-100' : 'bg-green-100'}`}>
+                    <span className={`text-xs font-bold ${u.deleted ? 'text-red-600' : 'text-green-600'}`}>
+                      {u.deleted ? "Yes" : "No"}
                     </span>
                   </span>
                 </td>
-                <td className="p-4 border-b text-gray-700 text-sm">{formatDate(u.created_date)}</td>
                 <td className="p-4 border-b text-center">
                   <div className="flex justify-center gap-2">
                     <button className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-medium hover:bg-blue-600 transition-colors duration-200 shadow-sm flex items-center">

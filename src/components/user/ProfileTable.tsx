@@ -12,6 +12,10 @@ const ProfileTable = ({ profiles }: Props) => {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const profilesPerPage = 5;
 
+
+
+  console.log("profiles", profiles);
+
   // Hàm xử lý tìm kiếm và sắp xếp
   const processedProfiles = useMemo(() => {
     let result = [...profiles];
@@ -20,9 +24,9 @@ const ProfileTable = ({ profiles }: Props) => {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       result = result.filter((p) =>
-        p.user_id.toLowerCase().includes(term) ||
-        p.full_name.toLowerCase().includes(term) ||
-        (p.phone_number && p.phone_number.toLowerCase().includes(term))
+        p.userId.toLowerCase().includes(term) ||
+        p.fullName.toLowerCase().includes(term) ||
+        (p.phoneNumber && p.phoneNumber.toLowerCase().includes(term))
       );
     }
 
@@ -59,6 +63,8 @@ const ProfileTable = ({ profiles }: Props) => {
     setSortField(sortField === field ? (sortDirection === "asc" ? "" : field) : field);
     setSortDirection(sortField === field && sortDirection === "asc" ? "desc" : "asc");
   };
+
+  console.log("Current Profiles:", currentProfiles);
 
   return (
     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 md:p-6 rounded-xl shadow-lg">
@@ -141,11 +147,11 @@ const ProfileTable = ({ profiles }: Props) => {
                   <td className="p-4 border-b">
                     <img
                       src={p.avatar || "https://via.placeholder.com/40?text=No+Avatar"}
-                      alt={p.full_name}
+                      alt={p.avatar}
                       className="w-10 h-10 rounded-full object-cover border border-gray-200 shadow-sm"
                     />
                   </td>
-                  <td className="p-4 border-b text-gray-900 text-sm font-medium">{p.full_name || "N/A"}</td>
+                  <td className="p-4 border-b text-gray-900 text-sm font-medium">{p.fullName || "N/A"}</td>
                   <td className="p-4 border-b">
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                       p.gender === "male"
@@ -157,10 +163,10 @@ const ProfileTable = ({ profiles }: Props) => {
                       {formatValue(p.gender, "gender")}
                     </span>
                   </td>
-                  <td className="p-4 border-b text-gray-700 text-sm">{formatValue(p.date_of_birth, "date")}</td>
-                  <td className="p-4 border-b text-gray-700 text-sm">{p.nick_name || "N/A"}</td>
-                  <td className="p-4 border-b text-gray-700 text-sm">{p.phone_number || "N/A"}</td>
-                  <td className="p-4 border-b text-gray-700 text-sm font-mono">{p.user_id}</td>
+                  <td className="p-4 border-b text-gray-700 text-sm">{formatValue(p.dateOfBirth, "date")}</td>
+                  <td className="p-4 border-b text-gray-700 text-sm">{p.nickName || "N/A"}</td>
+                  <td className="p-4 border-b text-gray-700 text-sm">{p.phoneNumber || "N/A"}</td>
+                  <td className="p-4 border-b text-gray-700 text-sm font-mono">{p.userId}</td>
                 </tr>
               ))
             ) : (

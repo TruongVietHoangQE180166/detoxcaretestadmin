@@ -2,8 +2,31 @@ import StatsCard from "../components/dashboard/StatsCard";
 import RevenueChart from "../components/dashboard/RevenueChart";
 import ProductPieChart from "../components/dashboard/ProductPieChart";
 import { BarChart3 } from "lucide-react";
+import { useUserStore } from "../store/userStore";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
+    const user = useUserStore((state) => state.user);
+    console.log("Current user in Dashboard:", user?.role);
+    const navigate = useNavigate();
+
+
+    if(!user){ 
+        navigate("/login");
+        
+        return;
+    }
+
+    if(user.role !== "ADMIN"){
+        navigate("/login");
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("userId");
+        localStorage.removeItem("userName");
+        localStorage.removeItem("email");
+        useUserStore.getState().clearUser();
+        return;
+    }
+
     return (
         <div className="p-6">
 
