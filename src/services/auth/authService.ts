@@ -7,7 +7,7 @@ export const login = async (data: { username: string; password: string }) => {
 };
 
 export const getUser = async (userId: string) => {
-    const token = localStorage.getItem("accessToken");
+    const token = sessionStorage.getItem("accessToken");
     const res = await api.get<UserResponse>(
         `/api/user/get-detail/${userId}`,
         {

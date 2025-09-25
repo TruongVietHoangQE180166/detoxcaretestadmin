@@ -19,10 +19,10 @@ const Dashboard = () => {
 
     if(user.role !== "ADMIN"){
         navigate("/login");
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("userId");
-        localStorage.removeItem("userName");
-        localStorage.removeItem("email");
+        sessionStorage.removeItem("accessToken");
+        sessionStorage.removeItem("userId");
+        sessionStorage.removeItem("userName");
+        sessionStorage.removeItem("email");
         useUserStore.getState().clearUser();
         return;
     }

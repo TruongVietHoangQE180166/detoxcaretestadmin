@@ -3,17 +3,31 @@ export type Product = {
   name: string;
   price: number;
   salePrice: number;
-  sales: number;
-  rating: number;
   image: string;
-  isActive?: boolean;
-  typeProduct?: TypeProduct; 
+  description?: string;
+  active?: boolean;
+  typeProduct?: TypeProduct;
+  statisticsRate?: {
+    totalRate: number;
+    averageRate: number;
+    totalSale: number;
+  };
+  rateResponses?: Array<{
+    id: string;
+    rating: number;
+    comment: string;
+    productId: string;
+    productName: string;
+    fullName: string;
+    avatar: string;
+    createdDate: string;
+  }>;
 };
 
 export type TypeProduct = {
   id: string;
-  name: string;  
+  name: string;
   image: string;
   description: string;
-  is_deleted: boolean;
+  deleted: boolean;
 };

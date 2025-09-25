@@ -11,7 +11,7 @@ export const API_URL =
 
 api.interceptors.request.use(
   (config) => {
-    const access_token = localStorage.getItem("accessToken");
+    const access_token = sessionStorage.getItem("accessToken");
     if(!access_token) {
       return config;
     }

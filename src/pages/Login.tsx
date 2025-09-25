@@ -25,10 +25,10 @@ const Login = () => {
             if (data.data.accessToken) {
 
                 
-                localStorage.setItem("accessToken", data.data.accessToken);
-                localStorage.setItem("userId", data.data.userId);
-                localStorage.setItem("userName", data.data.userName);
-                localStorage.setItem("email", data.data.email);
+                sessionStorage.setItem("accessToken", data.data.accessToken);
+                sessionStorage.setItem("userId", data.data.userId);
+                sessionStorage.setItem("userName", data.data.userName);
+                sessionStorage.setItem("email", data.data.email);
                 const userResponse = await getUser(data.data.userId);
                 console.log("userResponse", userResponse);
                 // Set user data in Zustand store
