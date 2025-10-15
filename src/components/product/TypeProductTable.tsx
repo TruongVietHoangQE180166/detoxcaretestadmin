@@ -1,4 +1,4 @@
-import { PencilIcon } from "@heroicons/react/16/solid";
+import { PencilSquareIcon } from "@heroicons/react/24/outline";
 import type { TypeProduct } from "./types";
 
 type Props = {
@@ -8,50 +8,51 @@ type Props = {
 
 const TypeProductTable = ({ typeProducts, onEdit }: Props) => {
   return (
-    <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
+    <div className="overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left">
-          <thead className="bg-green-500 text-white">
+          <thead className="bg-gray-900 text-white">
             <tr>
-              <th className="p-3 font-medium text-sm">#</th>
-              <th className="p-3 font-medium text-sm">Ảnh</th>
-              <th className="p-3 font-medium text-sm">Tên loại</th>
-              <th className="p-3 font-medium text-sm">Mô tả</th>
-              <th className="p-3 font-medium text-sm">Trạng thái</th>
-              <th className="p-3 font-medium text-sm text-center">Hành động</th>
+              <th className="p-4 font-semibold text-sm">#</th>
+              <th className="p-4 font-semibold text-sm">Tên loại</th>
+              <th className="p-4 font-semibold text-sm">Mô tả</th>
+              <th className="p-4 font-semibold text-sm">Trạng thái</th>
+              <th className="p-4 font-semibold text-sm text-center">Hành động</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-200">
             {typeProducts.map((item, index) => (
-              <tr key={item.id} className="hover:bg-green-50 transition-colors">
-                <td className="p-3 text-sm">{index + 1}</td>
-                <td className="p-3">
-                  <img
-                    src={item.image || "https://via.placeholder.com/64"}
-                    alt={item.name}
-                    className="w-10 h-10 object-cover rounded-md"
-                  />
+              <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                <td className="p-4 text-sm text-gray-600 font-medium">{index + 1}</td>
+                <td className="p-4 text-sm font-semibold text-gray-900 max-w-xs truncate">
+                  {item.name}
                 </td>
-                <td className="p-3 text-sm font-medium max-w-xs truncate">{item.name}</td>
-                <td className="p-3 text-sm text-gray-600 max-w-xs truncate">{item.description}</td>
-                <td className="p-3">
+                <td className="p-4 text-sm text-gray-600 max-w-xs truncate">
+                  {item.description || (
+                    <span className="text-gray-400 italic">Chưa có mô tả</span>
+                  )}
+                </td>
+                <td className="p-4">
                   {item.deleted ? (
-                    <span className="px-2 py-1 bg-red-100 text-red-600 rounded-full text-xs">
-                      Ngừng
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold border border-gray-300">
+                      <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
+                      Inactive
                     </span>
                   ) : (
-                    <span className="px-2 py-1 bg-green-100 text-green-600 rounded-full text-xs">
-                      Hoạt động
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 text-green-600 rounded-full text-xs font-semibold border border-green-200">
+                      <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                      Active
                     </span>
                   )}
                 </td>
-                <td className="p-3 align-middle">
+                <td className="p-4 align-middle">
                   <div className="flex justify-center gap-2">
                     <button
                       onClick={() => onEdit(item)}
-                      className="px-3 py-1 text-xs bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"
+                      className="p-2 bg-green-400 text-white rounded-lg hover:bg-green-500 transition-all transform hover:scale-110 shadow-sm"
+                      title="Chỉnh sửa"
                     >
-                      <PencilIcon className="w-3 h-3" />
+                      <PencilSquareIcon className="w-4 h-4" />
                     </button>
                   </div>
                 </td>
@@ -60,8 +61,16 @@ const TypeProductTable = ({ typeProducts, onEdit }: Props) => {
 
             {typeProducts.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-6 text-center text-gray-500 text-sm">
-                  Không có loại sản phẩm nào
+                <td colSpan={5} className="p-12 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                      </svg>
+                    </div>
+                    <p className="text-gray-500 font-medium">Không có loại sản phẩm nào</p>
+                    <p className="text-gray-400 text-sm">Thêm loại sản phẩm mới để bắt đầu</p>
+                  </div>
                 </td>
               </tr>
             )}

@@ -2,7 +2,7 @@ export type LoginResponse = {
   data: {
     accessToken: string;
     userId: string;
-    userName: string;
+    username: string;  // Fixed: changed from userName to username to match actual API response
     email: string;
     roles: string;
   }

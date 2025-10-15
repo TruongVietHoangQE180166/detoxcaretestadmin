@@ -1,26 +1,17 @@
-import { useState } from "react";
-
-import { createVoucher } from "../../services/vouCher";
+import { useState, useEffect, useRef } from "react";
+import { XMarkIcon, PhotoIcon, CloudArrowUpIcon } from "@heroicons/react/24/outline";
+import { createVoucher, updateVoucher, uploadVoucherImage } from "../../services/vouCher";
 import type { IVoucher } from "../../services/vouCher/IVoucher";
 import { useToast } from "../common/ToastContext";
+import type { Voucher } from "./types";
 
 type Props = {
-  voucher: IVoucher | null;
-  onSave: (v: IVoucher) => void;
+  voucher: Voucher | null;
+  onSave: (v: Voucher) => void;
   onClose: () => void;
 };
 
-// {
-//   "code": "string",
-//   "discountValue": 0,
-//   "minOrderValue": 0,
-//   "image": "string",
-//   "exchangePoint": 0,
-//   "active": true,
-//   "percentage": true
-// }
-const VoucherFormModal = ({ voucher, onSave
-  , onClose }: Props) => {
+const VoucherFormModal = ({ voucher, onSave, onClose }: Props) => {
   const [form, setForm] = useState<IVoucher>({
     code: voucher?.code || "",
     discountValue: voucher?.discountValue || 0,
@@ -29,138 +20,339 @@ const VoucherFormModal = ({ voucher, onSave
     exchangePoint: voucher?.exchangePoint || 0,
     active: voucher?.active || false,
     percentage: voucher?.percentage || false,
-  })
-    
-  const {addToast} = useToast();
+  });
+  
+  const [imagePreview, setImagePreview] = useState<string>(voucher?.image || "");
+  const [error, setError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { addToast } = useToast();
+
+  useEffect(() => {
+    if (voucher) {
+      setForm({
+        code: voucher.code || "",
+        discountValue: voucher.discountValue || 0,
+        minOrderValue: voucher.minOrderValue || 0,
+        image: voucher.image || "",
+        exchangePoint: voucher.exchangePoint || 0,
+        active: voucher.active || false,
+        percentage: voucher.percentage || false,
+      });
+      setImagePreview(voucher.image || "");
+    } else {
+      setForm({
+        code: "",
+        discountValue: 0,
+        minOrderValue: 0,
+        image: "",
+        exchangePoint: 0,
+        active: true,
+        percentage: false,
+      });
+      setImagePreview("");
+    }
+    setError(null);
+  }, [voucher]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: type === "checkbox" ? checked : type === "number" ? Number(value) : value,
     }));
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUploadImage = async () => {
+    const file = fileInputRef.current?.files?.[0];
+    if (file) {
+      try {
+        setIsUploading(true);
+        const imageUrl = await uploadVoucherImage(file);
+        // Update the form with the uploaded image URL
+        setForm(prev => ({ ...prev, image: imageUrl }));
+        setImagePreview(imageUrl);
+        addToast("Upload ảnh thành công!", "success");
+      } catch (error: any) {
+        addToast(`Lỗi khi upload ảnh: ${error.message || 'Đã có lỗi xảy ra'}`, "error");
+        console.error("Error uploading image:", error);
+      } finally {
+        setIsUploading(false);
+      }
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImagePreview("");
+    setForm(prev => ({ ...prev, image: "" }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const validateForm = () => {
+    if (!form.code.trim()) {
+      return "Vui lòng nhập mã voucher.";
+    }
+    if (form.discountValue <= 0) {
+      return "Giá trị giảm phải lớn hơn 0.";
+    }
+    if (form.minOrderValue < 0) {
+      return "Đơn tối thiểu không được âm.";
+    }
+    if (form.exchangePoint < 0) {
+      return "Điểm đổi không được âm.";
+    }
+    return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    
     try {
-      const res = await createVoucher(form);
-      console.log("Voucher created:", res);
+      let res;
+      if (voucher) {
+        // Update existing voucher
+        res = await updateVoucher(voucher.id.toString(), form);
+      } else {
+        // Create new voucher
+        res = await createVoucher(form);
+      }
+      
+      // Assuming the API returns the created/updated voucher with an ID
       onSave(res.data);
       onClose();
-    } catch (error) {
-      addToast(`Lỗi khi tạo voucher ${error?.response?.data.message.messageDetail}`, "error");
-      console.error("Lỗi khi tạo voucher", error);
+      // The parent component will handle the toast notification
+    } catch (error: any) {
+      // The parent component will handle the toast notification
+      console.error(`Lỗi khi ${voucher ? "cập nhật" : "tạo"} voucher`, error);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 transition-opacity duration-300">
-      <div className="bg-white rounded-xl p-6 w-full max-w-lg shadow-2xl transform transition-all duration-300 scale-100">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-6">
-          {voucher ? "Chỉnh sửa Voucher" : "Tạo Voucher"}
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Mã voucher
-            </label>
-            <input
-              name="code"
-              value={form.code}
-              onChange={handleChange}
-              placeholder="Nhập mã voucher"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors duration-200"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Giá trị giảm
-            </label>
-            <input
-              name="discount_value"
-              type="number"
-              value={form.discount_value}
-              onChange={handleChange}
-              placeholder="Nhập giá trị giảm"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors duration-200"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Đơn tối thiểu
-            </label>
-            <input
-              name="min_order_value"
-              type="number"
-              value={form.min_order_value}
-              onChange={handleChange}
-              placeholder="Nhập đơn tối thiểu"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors duration-200"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Điểm đổi
-            </label>
-            <input
-              name="exchange_point"
-              type="number"
-              value={form.exchange_point}
-              onChange={handleChange}
-              placeholder="Nhập điểm đổi"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors duration-200"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Link hình ảnh
-            </label>
-            <input
-              name="image"
-              value={form.image}
-              onChange={handleChange}
-              placeholder="Nhập link hình ảnh"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors duration-200"
-            />
-          </div>
-          <div className="flex items-center gap-6">
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                name="is_active"
-                checked={form.is_active}
-                onChange={handleChange}
-                className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-              />{" "}
-              Hoạt động
-            </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                name="is_percentage"
-                checked={form.is_percentage}
-                onChange={handleChange}
-                className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-              />{" "}
-              % Giảm giá
-            </label>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl transform transition-all duration-300 scale-100">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-2xl font-bold text-gray-900">
+            {voucher ? "Chỉnh sửa Voucher" : "Tạo Voucher"}
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <XMarkIcon className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {error && (
+            <div className="p-3 bg-red-50 text-red-700 rounded-lg border border-red-200 text-sm">
+              {error}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Left Column - Form Fields */}
+            <div className="space-y-5">
+              {/* Mã voucher */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Mã voucher <span className="text-red-500">*</span>
+                </label>
+                <input
+                  name="code"
+                  value={form.code}
+                  onChange={handleChange}
+                  placeholder="Nhập mã voucher"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all"
+                  required
+                />
+              </div>
+
+              {/* Giá trị giảm */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Giá trị giảm <span className="text-red-500">*</span>
+                </label>
+                <input
+                  name="discountValue"
+                  type="number"
+                  value={form.discountValue}
+                  onChange={handleChange}
+                  placeholder="Nhập giá trị giảm"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all"
+                />
+              </div>
+
+              {/* Đơn tối thiểu */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Đơn tối thiểu
+                </label>
+                <input
+                  name="minOrderValue"
+                  type="number"
+                  value={form.minOrderValue}
+                  onChange={handleChange}
+                  placeholder="Nhập đơn tối thiểu"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all"
+                />
+              </div>
+
+              {/* Điểm đổi */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Điểm đổi
+                </label>
+                <input
+                  name="exchangePoint"
+                  type="number"
+                  value={form.exchangePoint}
+                  onChange={handleChange}
+                  placeholder="Nhập điểm đổi"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Right Column - Other Fields */}
+            <div className="space-y-5">
+              {/* Trạng thái - Checkboxes */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Trạng thái
+                </label>
+                <div className="space-y-3">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="active"
+                      checked={form.active}
+                      onChange={handleChange}
+                      className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
+                    />
+                    <label className="ml-2 text-sm text-gray-700">
+                      Hoạt động
+                    </label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="percentage"
+                      checked={form.percentage}
+                      onChange={handleChange}
+                      className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
+                    />
+                    <label className="ml-2 text-sm text-gray-700">
+                      % Giảm giá
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ảnh voucher */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Ảnh voucher
+                </label>
+                
+                {/* Image Preview */}
+                {imagePreview && (
+                  <div className="mb-4 flex justify-center">
+                    <div className="relative">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-32 h-32 object-cover rounded-xl border-4 border-gray-200 shadow-md"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
+                      >
+                        <XMarkIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* File Input + Upload Button */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1">
+                    <label className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl hover:border-green-400 transition-colors cursor-pointer bg-gray-50 hover:bg-gray-100">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <PhotoIcon className="w-5 h-5" />
+                        <span className="font-medium">Chọn ảnh</span>
+                      </div>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleImageChange}
+                        accept="image/*"
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleUploadImage}
+                    disabled={isUploading || !fileInputRef.current?.files?.[0]}
+                    className="px-6 py-3 bg-green-400 text-white font-semibold rounded-xl hover:bg-green-500 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    {isUploading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Đang tải...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CloudArrowUpIcon className="w-5 h-5" />
+                        <span>Upload</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  Định dạng: JPG, PNG, GIF. Kích thước tối đa: 5MB
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div className="flex justify-end gap-3 mt-6">
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2 text-sm bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-colors duration-200 shadow-sm"
+              className="px-6 py-3 text-sm font-semibold bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all"
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="px-5 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 shadow-sm"
+              className="px-6 py-3 text-sm font-semibold bg-green-400 text-white rounded-xl hover:bg-green-500 transition-all shadow-sm transform hover:scale-105"
             >
-              Lưu
+              {voucher ? "Cập nhật" : "Tạo"}
             </button>
           </div>
         </form>

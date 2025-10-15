@@ -1,98 +1,176 @@
-import { useState, useMemo } from "react";
-import type { Category } from "../blog/types";
+import { useState, useMemo, useEffect } from "react";
+import { PencilSquareIcon, TrashIcon } from "@heroicons/react/24/outline";
+import CategoryPagination from "./CategoryPagination";
+
+// Define the Category API response structure
+interface CategoryApiResponse {
+  id: string;
+  createdDate: string;
+  name: string;
+  isActive: boolean;
+}
 
 type CategoryTableProps = {
-  categories: Category[];
-  onUpdate: (category: Category) => void;
-  onDelete: (id: string) => void;
+  categories: CategoryApiResponse[];
+  onUpdate: (category: CategoryApiResponse) => Promise<void>;
 };
 
 type CategoryFormModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (category: Category) => void;
-  initialData?: Category | null;
+  onSave: (category: CategoryApiResponse) => Promise<void>;
+  initialData?: CategoryApiResponse | null;
 };
 
 const CategoryFormModal: React.FC<CategoryFormModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
-  const [formData, setFormData] = useState<Category>({
-    id: initialData?.id || `c${Date.now()}`,
+  const [formData, setFormData] = useState<CategoryApiResponse>({
+    id: initialData?.id || "",
     name: initialData?.name || "",
-    is_active: initialData?.is_active ?? true,
-    created_date: initialData?.created_date || new Date().toISOString(),
+    isActive: initialData?.isActive ?? true,
+    createdDate: initialData?.createdDate || new Date().toISOString(),
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Reset form data when initialData changes
+  useEffect(() => {
+    setFormData({
+      id: initialData?.id || "",
+      name: initialData?.name || "",
+      isActive: initialData?.isActive ?? true,
+      createdDate: initialData?.createdDate || new Date().toISOString(),
+    });
+  }, [initialData]);
 
   if (!isOpen) return null;
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: name === "is_active" ? value === "true" : value });
+    setFormData({ ...formData, [name]: value });
   };
 
-  const handleSubmit = () => {
-    onSave(formData);
-    onClose();
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, isActive: e.target.checked });
+  };
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      console.log("Saving category data:", formData);
+      await onSave(formData);
+      onClose();
+    } catch (error) {
+      // Handle error if needed
+      console.error("Error saving category:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 transition-opacity duration-300">
-      <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl transform transition-all duration-300 scale-100">
-        <h2 className="text-2xl font-bold text-green-800 mb-6 tracking-tight">
-          {initialData ? "Chỉnh sửa Danh mục" : "Tạo Danh mục Mới"}
-        </h2>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl transform transition-all duration-300 scale-100">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-2xl font-bold text-gray-900">
+            {initialData ? "Chỉnh sửa Danh mục" : "Tạo Danh mục Mới"}
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            disabled={isSubmitting}
+          >
+            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
 
-        <div className="space-y-4">
+        <div className="p-6 space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Tên Danh mục</label>
+            <label className="block text-sm font-semibold text-gray-900 mb-2">
+              Tên Danh mục
+            </label>
             <input
               name="name"
               value={formData.name}
               onChange={handleChange}
               placeholder="Nhập tên danh mục"
-              className="w-full p-3 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-green-400 text-sm text-gray-700 bg-white shadow-sm transition-all duration-200 placeholder-gray-400"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all"
+              disabled={isSubmitting}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Trạng thái</label>
-            <select
-              name="is_active"
-              value={formData.is_active.toString()}
-              onChange={handleChange}
-              className="w-full p-3 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-green-400 text-sm text-gray-700 bg-white shadow-sm transition-all duration-200"
-            >
-              <option value="true">Hoạt động</option>
-              <option value="false">Không hoạt động</option>
-            </select>
+            <label className="block text-sm font-semibold text-gray-900 mb-2">
+              Trạng thái
+            </label>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                checked={formData.isActive}
+                onChange={handleCheckboxChange}
+                className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
+                disabled={isSubmitting}
+              />
+              <label className="ml-2 text-sm text-gray-700">
+                Active
+              </label>
+            </div>
           </div>
-        </div>
 
-        <div className="flex justify-end mt-6 space-x-3">
-          <button
-            onClick={onClose}
-            className="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors duration-200 text-sm font-medium"
-          >
-            Hủy
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 text-sm font-medium"
-          >
-            {initialData ? "Cập nhật" : "Tạo"}
-          </button>
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+            <button
+              onClick={onClose}
+              className="px-6 py-3 text-sm font-semibold bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all"
+              disabled={isSubmitting}
+            >
+              Hủy
+            </button>
+            <button
+              onClick={handleSubmit}
+              className={`px-6 py-3 text-sm font-semibold text-white rounded-xl shadow-sm transform transition-all hover:scale-105 ${
+                isSubmitting 
+                  ? "bg-gray-400 cursor-not-allowed" 
+                  : "bg-green-400 hover:bg-green-500"
+              }`}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                  Đang xử lý...
+                </div>
+              ) : initialData ? (
+                "Cập nhật"
+              ) : (
+                "Tạo"
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-const CategoryTable: React.FC<CategoryTableProps> = ({ categories, onUpdate, onDelete }) => {
+const CategoryTable: React.FC<CategoryTableProps> = ({ categories, onUpdate }) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortField, setSortField] = useState<"name" | "created_date" | "">("");
+  const [sortField, setSortField] = useState<"name" | "createdDate" | "">("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<CategoryApiResponse | null>(null);
   const categoriesPerPage = 5;
+
+  // Handle custom event to open modal
+  useEffect(() => {
+    const handleOpenModal = () => {
+      handleCreate();
+    };
+
+    window.addEventListener('openCategoryModal', handleOpenModal);
+    return () => {
+      window.removeEventListener('openCategoryModal', handleOpenModal);
+    };
+  }, []);
 
   // Search and filter
   const filteredCategories = useMemo(() => {
@@ -105,8 +183,8 @@ const CategoryTable: React.FC<CategoryTableProps> = ({ categories, onUpdate, onD
   const sortedCategories = useMemo(() => {
     if (!sortField) return filteredCategories;
     return [...filteredCategories].sort((a, b) => {
-      let aValue = sortField === "created_date" ? new Date(a[sortField]).getTime() : a[sortField];
-      let bValue = sortField === "created_date" ? new Date(b[sortField]).getTime() : b[sortField];
+      let aValue = sortField === "createdDate" ? new Date(a[sortField]).getTime() : a[sortField];
+      let bValue = sortField === "createdDate" ? new Date(b[sortField]).getTime() : b[sortField];
       return aValue < bValue ? (sortDirection === "asc" ? -1 : 1) : aValue > bValue ? (sortDirection === "asc" ? 1 : -1) : 0;
     });
   }, [filteredCategories, sortField, sortDirection]);
@@ -117,7 +195,7 @@ const CategoryTable: React.FC<CategoryTableProps> = ({ categories, onUpdate, onD
   const currentCategories = sortedCategories.slice(indexOfFirstCategory, indexOfLastCategory);
   const totalPages = Math.ceil(sortedCategories.length / categoriesPerPage);
 
-  const handleSort = (field: "name" | "created_date") => {
+  const handleSort = (field: "name" | "createdDate") => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -126,9 +204,7 @@ const CategoryTable: React.FC<CategoryTableProps> = ({ categories, onUpdate, onD
     }
   };
 
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-
-  const handleEdit = (category: Category) => {
+  const handleEdit = (category: CategoryApiResponse) => {
     setSelectedCategory(category);
     setIsModalOpen(true);
   };
@@ -138,20 +214,14 @@ const CategoryTable: React.FC<CategoryTableProps> = ({ categories, onUpdate, onD
     setIsModalOpen(true);
   };
 
-  const handleSave = (category: Category) => {
-    onUpdate(category);
+  const handleSave = async (category: CategoryApiResponse) => {
+    await onUpdate(category);
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-white">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-green-800 tracking-tight">Quản lý Danh mục</h2>
-        <button
-          onClick={handleCreate}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 text-sm font-medium"
-        >
-          Thêm Danh mục
-        </button>
+        <h2 className="text-2xl font-bold text-gray-900">Quản lý Danh mục</h2>
       </div>
 
       {/* Search Box */}
@@ -159,8 +229,7 @@ const CategoryTable: React.FC<CategoryTableProps> = ({ categories, onUpdate, onD
         <div className="relative w-full max-w-xs">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 text-green-500"
+              className="h-5 w-5 text-gray-400"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -181,120 +250,101 @@ const CategoryTable: React.FC<CategoryTableProps> = ({ categories, onUpdate, onD
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
-            className="pl-10 pr-4 py-2 w-full border border-green-200 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-green-400 text-sm text-gray-700 bg-white shadow-sm transition-all duration-200"
+            className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all"
           />
         </div>
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto shadow-xl rounded-xl bg-white">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-green-600 text-white">
-              <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide">ID</th>
-              <th
-                className="p-4 text-left text-sm font-semibold uppercase tracking-wide cursor-pointer hover:bg-green-700 transition-colors duration-150"
-                onClick={() => handleSort("name")}
-              >
-                Tên Danh mục {sortField === "name" && (sortDirection === "asc" ? "↑" : "↓")}
-              </th>
-              <th
-                className="p-4 text-left text-sm font-semibold uppercase tracking-wide cursor-pointer hover:bg-green-700 transition-colors duration-150"
-                onClick={() => handleSort("created_date")}
-              >
-                Ngày tạo {sortField === "created_date" && (sortDirection === "asc" ? "↑" : "↓")}
-              </th>
-              <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide">Trạng thái</th>
-              <th className="p-4 text-center text-sm font-semibold uppercase tracking-wide">Hành động</th>
-            </tr>
-          </thead>
-          <tbody>
-            {currentCategories.map((cat, index) => (
-              <tr
-                key={cat.id}
-                className={`${
-                  index % 2 === 0 ? "bg-green-50/50" : "bg-white"
-                } hover:bg-green-100/70 transition-all duration-200 ease-in-out transform hover:scale-[1.002]`}
-              >
-                <td className="p-4 text-sm text-gray-800 font-medium border-b border-green-100">{cat.id}</td>
-                <td className="p-4 text-sm text-gray-700 border-b border-green-100">{cat.name}</td>
-                <td className="p-4 text-sm text-gray-700 border-b border-green-100">
-                  {new Date(cat.created_date).toLocaleDateString("vi-VN", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </td>
-                <td className="p-4 text-sm text-gray-700 border-b border-green-100">
-                  {cat.is_active ? (
-                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                      Hoạt động
-                    </span>
-                  ) : (
-                    <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
-                      Không hoạt động
-                    </span>
-                  )}
-                </td>
-                <td className="p-4 text-center border-b border-green-100">
-                  <div className="flex justify-center space-x-2">
-                    <button
-                      onClick={() => handleEdit(cat)}
-                      className="px-4 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 text-sm font-medium"
-                    >
-                      Sửa
-                    </button>
-                    <button
-                      onClick={() => onDelete(cat.id)}
-                      className="px-4 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 text-sm font-medium"
-                    >
-                      Xóa
-                    </button>
-                  </div>
-                </td>
+      <div className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-gray-900 text-white">
+              <tr>
+                <th className="p-4 font-semibold text-sm">#</th>
+                <th 
+                  className="p-4 font-semibold text-sm cursor-pointer hover:bg-gray-800"
+                  onClick={() => handleSort("name")}
+                >
+                  Tên Danh mục {sortField === "name" && (sortDirection === "asc" ? "↑" : "↓")}
+                </th>
+                <th 
+                  className="p-4 font-semibold text-sm cursor-pointer hover:bg-gray-800"
+                  onClick={() => handleSort("createdDate")}
+                >
+                  Ngày tạo {sortField === "createdDate" && (sortDirection === "asc" ? "↑" : "↓")}
+                </th>
+                <th className="p-4 font-semibold text-sm">Trạng thái</th>
+                <th className="p-4 font-semibold text-sm text-center">Hành động</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {currentCategories.map((cat, index) => (
+                <tr key={cat.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="p-4 text-sm text-gray-600 font-medium">{indexOfFirstCategory + index + 1}</td>
+                  <td className="p-4 text-sm font-semibold text-gray-900 max-w-xs truncate">
+                    {cat.name}
+                  </td>
+                  <td className="p-4 text-sm text-gray-600">
+                    {new Date(cat.createdDate).toLocaleDateString("vi-VN", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </td>
+                  <td className="p-4 text-sm text-gray-600">
+                    {cat.isActive ? (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                        Hoạt động
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                        Không hoạt động
+                      </span>
+                    )}
+                  </td>
+                  <td className="p-4 align-middle">
+                    <div className="flex justify-center gap-2">
+                      <button
+                        onClick={() => handleEdit(cat)}
+                        className="p-2 bg-green-400 text-white rounded-lg hover:bg-green-500 transition-all transform hover:scale-110 shadow-sm"
+                        title="Chỉnh sửa"
+                      >
+                        <PencilSquareIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+
+              {currentCategories.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="p-12 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                        <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                        </svg>
+                      </div>
+                      <p className="text-gray-500 font-medium">Không có danh mục nào</p>
+                      <p className="text-gray-400 text-sm">Thêm danh mục mới để bắt đầu</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Pagination */}
-      <div className="flex justify-between items-center mt-4 px-4">
-        <div className="text-sm text-gray-600">
-          Showing {indexOfFirstCategory + 1} to {Math.min(indexOfLastCategory, sortedCategories.length)} of {sortedCategories.length} entries
-        </div>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => paginate(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-green-700 transition-colors duration-200 text-sm font-medium"
-          >
-            Previous
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
-            <button
-              key={number}
-              onClick={() => paginate(number)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                currentPage === number
-                  ? "bg-green-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-green-100"
-              } transition-colors duration-200`}
-            >
-              {number}
-            </button>
-          ))}
-          <button
-            onClick={() => paginate(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-green-700 transition-colors duration-200 text-sm font-medium"
-          >
-            Next
-          </button>
-        </div>
-      </div>
+      <CategoryPagination 
+        currentPage={currentPage} 
+        totalPages={totalPages} 
+        totalItems={sortedCategories.length}
+        itemsPerPage={categoriesPerPage}
+        onPageChange={(pageNumber: number) => setCurrentPage(pageNumber)}
+      />
 
       <CategoryFormModal
         isOpen={isModalOpen}

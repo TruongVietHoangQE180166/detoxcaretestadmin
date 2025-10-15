@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import VoucherFormModal from "../components/voucher/VoucherFormModal";
 import type { Voucher } from "../components/voucher/types";
 import VoucherCard from "../components/voucher/VoucherCard";
-import { Ticket } from "lucide-react";
+import { Ticket, Plus, Search } from "lucide-react";
 import { getVouchersAll } from "../services/vouCher";
 import { useToast } from "../components/common/ToastContext";
 
@@ -10,6 +10,7 @@ const VoucherManagement = () => {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { addToast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -23,16 +24,8 @@ const VoucherManagement = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (voucher: Voucher) => {
-    if (confirm(`Bạn có chắc chắn muốn xóa voucher ${voucher.code}?`)) {
-      setVouchers((prev) => prev.filter((v) => v.id !== voucher.id));
-      // TODO: call API xóa ở đây nếu có
-    }
-  };
-
-  const handleSave = async (voucher: Voucher) => {
+  const handleSave = async (voucher: any) => {
     try {
-      // Sau khi lưu thành công, gọi lại API để lấy danh sách mới nhất
       await getAllVouchers();
       setIsModalOpen(false);
       addToast("Cập nhật voucher thành công!", "success");
@@ -44,7 +37,7 @@ const VoucherManagement = () => {
   const getAllVouchers = async () => {
     try {
       setIsLoading(true);
-      const data = await getVouchersAll({ page: 1, size: 10 });
+      const data = await getVouchersAll({ page: 1, size: 1000 });
       setVouchers(data.data.content);
     } catch (error) {
       addToast("Lỗi khi tải voucher", "error");
@@ -57,57 +50,109 @@ const VoucherManagement = () => {
     getAllVouchers();
   }, []);
 
-  return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-green-600 flex items-center gap-3">
-          <Ticket className="w-7 h-7" />
-          Quản lý Voucher
-        </h1>
-        <button
-          onClick={handleCreate}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 transition"
-        >
-          + Tạo Voucher
-        </button>
-      </div>
+  const filteredVouchers = vouchers.filter(voucher => 
+    voucher.code?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {[...Array(8)].map((_, index) => (
-            <div key={index} className="bg-white rounded-xl shadow-md p-5 flex flex-col justify-between border border-gray-100 animate-pulse">
-              <div className="space-y-2">
-                <div className="h-6 bg-gray-200 rounded w-24"></div>
-                <div className="h-4 bg-gray-200 rounded w-32"></div>
-                <div className="h-4 bg-gray-200 rounded w-40"></div>
-                <div className="h-4 bg-gray-200 rounded w-28"></div>
-                <div className="h-5 bg-gray-200 rounded-full w-24"></div>
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header Section */}
+      <div className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-green-400 rounded-xl flex items-center justify-center shadow-md">
+                <Ticket className="w-6 h-6 text-white" />
               </div>
-              <div className="flex justify-end mt-4 gap-3">
-                <div className="h-8 bg-gray-200 rounded w-16"></div>
-                <div className="h-8 bg-gray-200 rounded w-16"></div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                  Quản lý Voucher
+                </h1>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Tổng số: {vouchers.length} voucher
+                </p>
               </div>
             </div>
-          ))}
+            <button
+              onClick={handleCreate}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-green-400 text-white font-medium rounded-xl shadow-md hover:bg-green-500 hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Tạo Voucher</span>
+            </button>
+          </div>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {vouchers.length > 0 ? (
-            vouchers.map((voucher) => (
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative max-w-md">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Tìm kiếm voucher theo mã hoặc mô tả..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent shadow-sm transition-all duration-200"
+            />
+          </div>
+        </div>
+
+        {/* Vouchers Grid */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[...Array(8)].map((_, index) => (
+              <div key={index} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 animate-pulse">
+                <div className="space-y-3">
+                  <div className="h-6 bg-gray-200 rounded-lg w-28"></div>
+                  <div className="h-4 bg-gray-200 rounded w-full"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-4 bg-gray-200 rounded w-32"></div>
+                  <div className="h-6 bg-gray-200 rounded-full w-24 mt-4"></div>
+                </div>
+                <div className="flex justify-end mt-6 gap-2">
+                  <div className="h-9 bg-gray-200 rounded-lg w-20"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredVouchers.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredVouchers.map((voucher) => (
               <VoucherCard
                 key={voucher.id}
                 voucher={voucher}
                 onEdit={handleEdit}
-                onDelete={handleDelete}
               />
-            ))
-          ) : (
-            <p className="col-span-full text-center text-gray-500">
-              Không có voucher nào
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 px-4">
+            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <Ticket className="w-10 h-10 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">
+              {searchQuery ? "Không tìm thấy voucher" : "Chưa có voucher nào"}
+            </h3>
+            <p className="text-gray-500 text-center max-w-md">
+              {searchQuery 
+                ? "Không tìm thấy voucher phù hợp với từ khóa của bạn"
+                : "Bắt đầu bằng cách tạo voucher đầu tiên của bạn"}
             </p>
-          )}
-        </div>
-      )}
+            {!searchQuery && (
+              <button
+                onClick={handleCreate}
+                className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-green-400 text-white font-medium rounded-xl shadow-md hover:bg-green-500 hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
+              >
+                <Plus className="w-5 h-5" />
+                <span>Tạo Voucher Đầu Tiên</span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       {isModalOpen && (
         <VoucherFormModal

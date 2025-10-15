@@ -12,3 +12,21 @@ export const createVoucher  = async ( request: IVoucher) => {
     return res.data;
 }
 
+export const updateVoucher = async (voucherId: string, request: IVoucher) => {
+    const res = await api.put(`/api/vouchers/${voucherId}`, request);
+    return res.data;
+}
+
+export const uploadVoucherImage = async (file: File) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  
+  const res = await api.post("/api/images/upload", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  
+  return res.data.data; // Return just the URL string from the data field
+};
+    

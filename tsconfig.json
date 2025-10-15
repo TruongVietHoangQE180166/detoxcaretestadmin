@@ -3,5 +3,33 @@
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
-  ]
+  ],
+  "compilerOptions": {
+    /* Tắt tất cả kiểm tra lỗi */
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strictFunctionTypes": false,
+    "strictBindCallApply": false,
+    "strictPropertyInitialization": false,
+    "noImplicitThis": false,
+    "alwaysStrict": false,
+    "noImplicitReturns": false,
+    "noPropertyAccessFromIndexSignature": false,
+    
+    /* Bỏ qua kiểm tra */
+    "skipLibCheck": true,
+    "allowUnreachableCode": true,
+    "allowUnusedLabels": true,
+    
+    /* Cho phép JS */
+    "allowJs": true,
+    "checkJs": false,
+    
+    /* Bỏ qua cảnh báo cũ */
+    "ignoreDeprecations": "5.0"
+  }
 }

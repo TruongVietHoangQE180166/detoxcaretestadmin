@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { UserGroupIcon } from "@heroicons/react/24/outline";
 import type { Profile, User } from "../components/user/types";
-import UserStats from "../components/user/UserStats";
-import UserTabs from "../components/user/UserTabs";
-import SearchSortBar from "../components/user/SearchSortBar";
 import UserTable from "../components/user/UserTable";
+import UserPagination from "../components/user/UserPagination";
 import ProfileTable from "../components/user/ProfileTable";
+import ProfilePagination from "../components/user/ProfilePagination";
 import { getAllUser } from "../services/users";
 import { useToast } from "../components/common/ToastContext";
 import { getAllProfile } from "../services/profile";
@@ -13,28 +12,60 @@ import { getAllProfile } from "../services/profile";
 const UserManagement = () => {
   const [activeTab, setActiveTab] = useState<"users" | "profiles">("users");
   const [search, setSearch] = useState("");
-  const [sortKey, setSortKey] = useState<"created_date" | "username" | "is_deleted">("created_date");
   const [users, setUsers] = useState<User[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [profileCurrentPage, setProfileCurrentPage] = useState(1);
+  const [profileSearchTerm, setProfileSearchTerm] = useState("");
+  const usersPerPage = 5;
+  const profilesPerPage = 5;
   const {addToast} = useToast();
 
-  // filter + sort
-  const filteredUsers = users
-    .filter((u) => u.username.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => {
-      if (sortKey === "created_date") return new Date(b.created_date).getTime() - new Date(a.created_date).getTime();
-      if (sortKey === "username") return a.username.localeCompare(b.username);
-      if (sortKey === "is_deleted") return a.deleted - b.deleted;
-      return 0;
-    });
+  // Filter users (no sorting)
+  const filteredUsers = useMemo(() => {
+    let result = [...users];
 
-  // statistics
-  const today = "2025-09-13";
-  const totalUsers = users.length;
-  const todayUsers = users.filter((u) => u.created_date === today).length;
-  const yesterdayUsers = users.filter((u) => u.created_date === "2025-09-12").length;
-  const growthRate = yesterdayUsers > 0 ? (((todayUsers - yesterdayUsers) / yesterdayUsers) * 100).toFixed(1) : "100";
+    // Search only
+    if (search) {
+      const term = search.toLowerCase();
+      result = result.filter((u) =>
+        u.username.toLowerCase().includes(term) ||
+        u.email.toLowerCase().includes(term)
+      );
+    }
+
+    return result;
+  }, [users, search]);
+
+  // Process profiles with search only
+  const processedProfiles = useMemo(() => {
+    let result = [...profiles];
+
+    // Search only
+    if (profileSearchTerm) {
+      const term = profileSearchTerm.toLowerCase();
+      result = result.filter((p) =>
+        p.userId.toLowerCase().includes(term) ||
+        p.fullName.toLowerCase().includes(term) ||
+        (p.phoneNumber && p.phoneNumber.toLowerCase().includes(term))
+      );
+    }
+
+    return result;
+  }, [profiles, profileSearchTerm]);
+
+  // Pagination for users
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+  const userTotalPages = Math.ceil(filteredUsers.length / usersPerPage);
+
+  // Pagination for profiles
+  const indexOfLastProfile = profileCurrentPage * profilesPerPage;
+  const indexOfFirstProfile = indexOfLastProfile - profilesPerPage;
+  const currentProfiles = processedProfiles.slice(indexOfFirstProfile, indexOfLastProfile);
+  const profileTotalPages = Math.ceil(processedProfiles.length / profilesPerPage);
 
   const fetchDataUserGetAll = async () => {
     try {
@@ -69,23 +100,117 @@ const UserManagement = () => {
   console.log("Profile", profiles);
 
   return (
-    <div className="p-8 space-y-6">
-      <h1 className="text-3xl font-bold text-green-600 flex items-center gap-3">
-        <UserGroupIcon className="w-8 h-8 text-green-600" />
-        Quản lý User
-      </h1>
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+            <div className="p-2 bg-green-400 rounded-xl">
+              <UserGroupIcon className="w-7 h-7 text-white" />
+            </div>
+            Quản lý User
+          </h1>
+        </div>
 
-      <UserStats totalUsers={totalUsers} todayUsers={todayUsers} growthRate={growthRate} />
-      <UserTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+        {/* Tabs */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <nav className="flex">
+            <button
+              className={`flex-1 py-4 px-6 text-center font-semibold transition-all ${
+                activeTab === "users"
+                  ? "bg-green-400 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+              onClick={() => setActiveTab("users")}
+            >
+              Danh sách user
+            </button>
+            <button
+              className={`flex-1 py-4 px-6 text-center font-semibold transition-all ${
+                activeTab === "profiles"
+                  ? "bg-green-400 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+              onClick={() => setActiveTab("profiles")}
+            >
+              Hồ sơ
+            </button>
+          </nav>
+        </div>
 
-      {activeTab === "users" && (
-        <>
-          <SearchSortBar search={search} setSearch={setSearch} sortKey={sortKey} setSortKey={setSortKey} />
-          <UserTable users={filteredUsers} />
-        </>
-      )}
+        {/* Content */}
+        {activeTab === "users" && (
+          <div className="space-y-6">
+            {/* User Search */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+              <div className="flex flex-col md:flex-row gap-4 items-center">
+                <div className="relative flex-grow">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm theo Username hoặc Email..."
+                    value={search}
+                    onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+                    className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <UserTable users={currentUsers} />
+            </div>
+            
+            <UserPagination 
+              currentPage={currentPage}
+              totalPages={userTotalPages}
+              totalItems={filteredUsers.length}
+              itemsPerPage={usersPerPage}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
 
-      {activeTab === "profiles" && <ProfileTable profiles={profiles} />}
+        {activeTab === "profiles" && (
+          <div className="space-y-6">
+            {/* Profile Search */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+              <div className="flex flex-col md:flex-row gap-4 items-center">
+                <div className="relative flex-grow">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm theo User ID, Họ tên hoặc Số điện thoại..."
+                    value={profileSearchTerm}
+                    onChange={(e) => { setProfileSearchTerm(e.target.value); setProfileCurrentPage(1); }}
+                    className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <ProfileTable profiles={currentProfiles} />
+            </div>
+            
+            <ProfilePagination 
+              currentPage={profileCurrentPage}
+              totalPages={profileTotalPages}
+              totalItems={processedProfiles.length}
+              itemsPerPage={profilesPerPage}
+              onPageChange={setProfileCurrentPage}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 };

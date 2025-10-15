@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-type PaginationProps = {
+type ProfilePaginationProps = {
   currentPage: number;
   totalPages: number;
   totalItems: number;
@@ -8,7 +8,7 @@ type PaginationProps = {
   onPageChange: (page: number) => void;
 };
 
-const Pagination = ({ currentPage, totalPages, totalItems, itemsPerPage, onPageChange }: PaginationProps) => {
+const ProfilePagination = ({ currentPage, totalPages, totalItems, itemsPerPage, onPageChange }: ProfilePaginationProps) => {
   // Don't show pagination if there's only one page
   if (totalPages <= 1) return null;
 
@@ -75,7 +75,7 @@ const Pagination = ({ currentPage, totalPages, totalItems, itemsPerPage, onPageC
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
       {/* Page info */}
       <div className="text-sm text-gray-600">
-        Hiển thị <span className="font-medium">{startItem}</span> đến <span className="font-medium">{endItem}</span> trong tổng số <span className="font-medium">{totalItems}</span> sản phẩm
+        Hiển thị <span className="font-medium">{startItem}</span> đến <span className="font-medium">{endItem}</span> trong tổng số <span className="font-medium">{totalItems}</span> hồ sơ
       </div>
 
       <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -126,7 +126,7 @@ const Pagination = ({ currentPage, totalPages, totalItems, itemsPerPage, onPageC
                 onClick={() => onPageChange(page as number)}
                 className={`px-4 py-2 rounded-xl transition-all ${
                   page === currentPage
-                    ? "bg-green-500 text-white font-medium shadow-md hover:bg-green-600"
+                    ? "bg-green-400 text-white font-medium shadow-md hover:bg-green-500"
                     : "bg-white text-gray-700 hover:bg-green-50 hover:text-green-600 border border-gray-200 shadow-sm"
                 }`}
               >
@@ -153,4 +153,4 @@ const Pagination = ({ currentPage, totalPages, totalItems, itemsPerPage, onPageC
   );
 };
 
-export default Pagination;
+export default ProfilePagination;

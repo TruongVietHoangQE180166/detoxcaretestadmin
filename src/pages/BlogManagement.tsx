@@ -1,68 +1,87 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import BlogSearchBar from "../components/blog/BlogSearchBar";
 import BlogTable from "../components/blog/BlogTable";
 import BlogPagination from "../components/blog/BlogPagination";
 import BlogFormModal from "../components/blog/BlogFormModal";
 import CategoryTable from "../components/blog/CategoryTable";
-import type { Blog, Category } from "../components/blog/types";
 import type { User } from "../components/user/types";
-import { FileText } from "lucide-react";
+import { FileText, PlusIcon, FunnelIcon } from "lucide-react";
+import { getBlogsAll, getBlogsCategoryAll, createBlog, updateBlog, deleteBlog, createBlogCategory, updateBlogCategory } from "../services/blogs";
+import { useToast } from "../components/common/ToastContext";
+import { useUserStore } from "../store/userStore";
 
-// Fake categories
-const fakeCategories: Category[] = [
-    { id: "c1", name: "Thanh Lọc Cơ Thể Toàn Diện", is_active: true, created_date: "2025-09-01" },
-    { id: "c2", name: "Giải Nhiệt & Tăng Năng Lượng", is_active: true, created_date: "2025-09-02" },
-    { id: "c3", name: "Làm Đẹp Da", is_active: true, created_date: "2025-09-03" },
-    { id: "c4", name: "Rau Củ & Thảo Mộc", is_active: true, created_date: "2025-09-04" },
-    { id: "c5", name: "Kết Hợp Siêu Hạt & Trà", is_active: true, created_date: "2025-09-05" },
-];
+// Define the API response structure
+interface BlogApiResponse {
+  id: string;
+  createdDate: string;
+  title: string;
+  content: string;
+  image: string;
+  emojis: number;
+  view: boolean;
+  userName: string;
+  fullname: string;
+  categoryName: string;
+  slugName: string;
+}
 
-// Fake users
-const users: User[] = [
-    { id: "1", email: "ledoanhieu12a6@gmail.com", username: "otisdoan1", status: "ACTIVE", role_name: "USER", is_deleted: 0, created_date: "2025-09-13" },
-    { id: "2", email: "ledo@gmail.com", username: "otisdoan", status: "INACTIVE", role_name: "USER", is_deleted: 0, created_date: "2025-09-12" },
-    { id: "3", email: "Thuong123@gmail.com", username: "Thuong123@", status: "ACTIVE", role_name: "USER", is_deleted: 0, created_date: "2025-09-13" },
-];
-
-// Fake blogs
-const fakeBlogs: Blog[] = [
-    {
-        id: "b1",
-        title: "Detox Detox Giải Nhiệt",
-        slug_name: "detox-detox-giai-nhiet",
-        image: "https://via.placeholder.com/100x60.png?text=Blog1",
-        content: "Vào những ngày hè oi bức...",
-        emojis: 0,
-        view: 1,
-        category: fakeCategories[0],
-        user: users[0],
-        created_date: "2025-09-10",
-    },
-    {
-        id: "b2",
-        title: "Detox Rau Củ & Thảo Mộc",
-        slug_name: "detox-rau-cu-thao-moc",
-        image: "https://via.placeholder.com/100x60.png?text=Blog2",
-        content: "Detox rau củ giúp thanh lọc...",
-        emojis: 0,
-        view: 2,
-        category: fakeCategories[1],
-        user: users[0],
-        created_date: "2025-09-11",
-    },
-];
+// Define the Category API response structure
+interface CategoryApiResponse {
+  id: string;
+  createdDate: string;
+  name: string;
+  isActive: boolean;
+}
 
 const BlogManagement = () => {
     const [activeTab, setActiveTab] = useState<"blogs" | "categories">("blogs");
-    const [blogs, setBlogs] = useState<Blog[]>(fakeBlogs);
-    const [categories, setCategories] = useState<Category[]>(fakeCategories);
+    const [isSortOpen, setIsSortOpen] = useState(false);
+    const sortRef = useRef<HTMLDivElement>(null);
+    
+    const [blogs, setBlogs] = useState<BlogApiResponse[]>([]);
+    const [categories, setCategories] = useState<CategoryApiResponse[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
-    const [sortField, setSortField] = useState<"title" | "view" | "emojis" | "created_date" | "">("");
+    const [sortField, setSortField] = useState<"title" | "view" | "emojis" | "createdDate" | "">("");
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
     const [currentPage, setCurrentPage] = useState(1);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingBlog, setEditingBlog] = useState<Blog | null>(null);
+    const [editingBlog, setEditingBlog] = useState<BlogApiResponse | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
     const blogsPerPage = 5;
+    const { addToast } = useToast();
+    const { user } = useUserStore();
+
+    // Fetch blogs from API
+    const fetchBlogs = async () => {
+        try {
+            setIsLoading(true);
+            const response = await getBlogsAll({ page: 1, size: 1000 });
+            // Use API response directly without transformation
+            setBlogs(response.data.content);
+        } catch (error) {
+            console.error("Error fetching blogs:", error);
+            addToast("Lỗi khi tải danh sách blog", "error");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Fetch categories from API
+    const fetchCategories = async () => {
+        try {
+            const response = await getBlogsCategoryAll({ page: 1, size: 1000 });
+            setCategories(response.data.content || []);
+        } catch (error) {
+            console.error("Error fetching categories:", error);
+            addToast("Lỗi khi tải danh sách danh mục", "error");
+        }
+    };
+
+    useEffect(() => {
+        fetchBlogs();
+        fetchCategories();
+    }, []);
 
     // Filter blogs
     const filteredBlogs = useMemo(() => {
@@ -71,8 +90,8 @@ const BlogManagement = () => {
         return blogs.filter(
             (blog) =>
                 blog.title.toLowerCase().includes(term) ||
-                blog.slug_name.toLowerCase().includes(term) ||
-                blog.category.name.toLowerCase().includes(term)
+                blog.slugName.toLowerCase().includes(term) ||
+                blog.categoryName.toLowerCase().includes(term)
         );
     }, [blogs, searchTerm]);
 
@@ -80,9 +99,20 @@ const BlogManagement = () => {
     const sortedBlogs = useMemo(() => {
         if (!sortField) return filteredBlogs;
         return [...filteredBlogs].sort((a, b) => {
-            let aValue = sortField === "created_date" ? new Date(a[sortField]).getTime() : a[sortField];
-            let bValue = sortField === "created_date" ? new Date(b[sortField]).getTime() : b[sortField];
-            return aValue < bValue ? (sortDirection === "asc" ? -1 : 1) : aValue > bValue ? (sortDirection === "asc" ? 1 : -1) : 0;
+            let aValue: any;
+            let bValue: any;
+            
+            if (sortField === "createdDate") {
+                aValue = new Date(a[sortField]).getTime();
+                bValue = new Date(b[sortField]).getTime();
+            } else {
+                aValue = a[sortField];
+                bValue = b[sortField];
+            }
+            
+            if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+            if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+            return 0;
         });
     }, [filteredBlogs, sortField, sortDirection]);
 
@@ -92,7 +122,7 @@ const BlogManagement = () => {
     const currentBlogs = sortedBlogs.slice(indexOfFirstBlog, indexOfLastBlog);
     const totalPages = Math.ceil(sortedBlogs.length / blogsPerPage);
 
-    const handleSort = (field: "title" | "view" | "emojis" | "created_date") => {
+    const handleSort = (field: "title" | "view" | "emojis" | "createdDate") => {
         if (sortField === field) {
             setSortDirection(sortDirection === "asc" ? "desc" : "asc");
         } else {
@@ -101,118 +131,323 @@ const BlogManagement = () => {
         }
     };
 
-    const handleDeleteBlog = (id: string) => {
+    const handleDeleteBlog = async (id: string) => {
         if (window.confirm("Bạn có chắc muốn xóa blog này?")) {
-            setBlogs(blogs.filter((b) => b.id !== id));
+            try {
+                // Call the deleteBlog API
+                await deleteBlog(id);
+                
+                // Remove the blog from the list
+                setBlogs(blogs.filter((b) => b.id !== id));
+                addToast("Blog đã được xóa thành công!", "success");
+            } catch (error) {
+                console.error("Error deleting blog:", error);
+                addToast("Có lỗi xảy ra khi xóa blog. Vui lòng thử lại.", "error");
+            }
         }
     };
 
-    const handleSaveBlog = (blog: Blog) => {
-        if (editingBlog) {
-            setBlogs(blogs.map((b) => (b.id === blog.id ? blog : b)));
-        } else {
-            setBlogs([...blogs, blog]);
+    const handleSaveBlog = async (blog: BlogApiResponse) => {
+        try {
+            // Get the selected category
+            const selectedCategory = categories.find(c => c.name === blog.categoryName);
+            
+            if (!selectedCategory) {
+                addToast("Không tìm thấy danh mục đã chọn", "error");
+                return;
+            }
+            
+            if (!user) {
+                addToast("Vui lòng đăng nhập để tạo blog", "error");
+                return;
+            }
+            
+            // Create the request object in the correct format
+            const blogRequest = {
+                title: blog.title,
+                content: blog.content,
+                image: blog.image,
+                view: blog.view,
+                userId: user.userId,
+                categoryId: selectedCategory.id
+            };
+            
+            if (editingBlog) {
+                // For editing, call the updateBlog API
+                const response = await updateBlog(editingBlog.id, blogRequest);
+                
+                // Update the blog in the list
+                const updatedBlog: BlogApiResponse = {
+                    ...blog,
+                    id: response.data.id || editingBlog.id,
+                    createdDate: editingBlog.createdDate, // Keep original created date
+                    userName: user.username,
+                    fullname: user.username
+                };
+                
+                setBlogs(blogs.map((b) => (b.id === editingBlog.id ? updatedBlog : b)));
+                addToast("Blog đã được cập nhật thành công!", "success");
+            } else {
+                // For creating new blog, call the createBlog API
+                const response = await createBlog(blogRequest);
+                
+                // Add the new blog to the list
+                const newBlog: BlogApiResponse = {
+                    ...blog,
+                    id: response.data.id || `new-${Date.now()}`,
+                    createdDate: new Date().toISOString(),
+                    userName: user.username,
+                    fullname: user.username
+                };
+                
+                setBlogs([...blogs, newBlog]);
+                addToast("Blog đã được tạo thành công!", "success");
+            }
+        } catch (error) {
+            console.error("Error saving blog:", error);
+            if (editingBlog) {
+                addToast("Có lỗi xảy ra khi cập nhật blog. Vui lòng thử lại.", "error");
+            } else {
+                addToast("Có lỗi xảy ra khi tạo blog. Vui lòng thử lại.", "error");
+            }
         }
+        
         setIsModalOpen(false);
     };
 
-    const handleUpdateCategory = (category: Category) => {
-        if (category.id.startsWith("c")) {
-            setCategories(categories.map((c) => (c.id === category.id ? category : c)));
-        } else {
-            setCategories([...categories, category]);
+    const handleUpdateCategory = async (category: CategoryApiResponse): Promise<void> => {
+        try {
+            console.log("handleUpdateCategory called with:", category);
+            // If category has an ID, it's an update operation
+            if (category.id && category.id.trim() !== "") {
+                console.log("Updating existing category with ID:", category.id);
+                // It's an existing category, call the API to update it
+                const categoryRequest = {
+                    name: category.name,
+                    isActive: category.isActive
+                };
+                
+                const response = await updateBlogCategory(category.id, categoryRequest);
+                
+                // Update the category with the data from the API response
+                const updatedCategory: CategoryApiResponse = {
+                    ...category,
+                    id: response.data.id || category.id,
+                    createdDate: response.data.createdDate || category.createdDate
+                };
+                
+                setCategories(categories.map((c) => (c.id === category.id ? updatedCategory : c)));
+                addToast("Danh mục đã được cập nhật thành công!", "success");
+            } else {
+                console.log("Creating new category");
+                // It's a new category, call the API to create it
+                const categoryRequest = {
+                    name: category.name,
+                    isActive: category.isActive
+                };
+                
+                const response = await createBlogCategory(categoryRequest);
+                
+                // Add the new category with the ID from the API response
+                const newCategory: CategoryApiResponse = {
+                    ...category,
+                    id: response.data.id || `c${Date.now()}`,
+                    createdDate: new Date().toISOString()
+                };
+                
+                setCategories([...categories, newCategory]);
+                addToast("Danh mục đã được tạo thành công!", "success");
+            }
+        } catch (error) {
+            console.error("Error saving category:", error);
+            addToast("Có lỗi xảy ra khi lưu danh mục. Vui lòng thử lại.", "error");
+            throw error; // Re-throw the error so the modal knows about it
         }
     };
 
-    const handleDeleteCategory = (id: string) => {
-        if (window.confirm("Bạn có chắc muốn xóa danh mục này?")) {
-            setCategories(categories.filter((c) => c.id !== id));
-        }
-    };
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (sortRef.current && !sortRef.current.contains(event.target as Node)) {
+                setIsSortOpen(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
+    const sortOptions = [
+        { value: "", label: "Sắp xếp" },
+        { value: "title", label: "Theo tiêu đề" },
+        { value: "view", label: "Theo lượt xem" },
+        { value: "emojis", label: "Theo biểu cảm" },
+        { value: "createdDate", label: "Theo ngày tạo" },
+    ];
+
+    const currentSortLabel = sortOptions.find(option => option.value === sortField)?.label || "Sắp xếp";
 
     return (
-        <div className="p-8 bg-gray-50 min-h-screen">
-            <h1 className="text-3xl font-bold text-green-600 flex items-center gap-3 mb-8 tracking-tight">
-                <FileText className="w-8 h-8" />
-                Quản lý Blog
-            </h1>
-            {/* Tabs */}
-            <div className="flex space-x-2 mb-6 border-b border-green-200">
-                <button
-                    onClick={() => setActiveTab("blogs")}
-                    className={`px-6 py-3 rounded-t-lg text-sm font-medium transition-all duration-200 ${activeTab === "blogs"
-                            ? "bg-green-600 text-white"
-                            : "bg-gray-100 text-gray-600 hover:bg-green-100 hover:text-green-700"
-                        }`}
-                >
-                    Blogs
-                </button>
-                <button
-                    onClick={() => setActiveTab("categories")}
-                    className={`px-6 py-3 rounded-t-lg text-sm font-medium transition-all duration-200 ${activeTab === "categories"
-                            ? "bg-green-600 text-white"
-                            : "bg-gray-100 text-gray-600 hover:bg-green-100 hover:text-green-700"
-                        }`}
-                >
-                    Danh mục
-                </button>
-            </div>
-
-            {/* Content */}
-            {activeTab === "blogs" ? (
-                <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                        <BlogSearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} setCurrentPage={setCurrentPage} />
-                        <button
-                            onClick={() => {
-                                setEditingBlog(null);
-                                setIsModalOpen(true);
-                            }}
-                            className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 text-sm font-medium shadow-sm"
-                        >
-                            + Thêm Blog
-                        </button>
-                    </div>
-
-                    <BlogTable
-                        blogs={currentBlogs}
-                        categories={categories}
-                        users={users}
-                        sortField={sortField}
-                        sortDirection={sortDirection}
-                        handleSort={handleSort}
-                        handleDelete={handleDeleteBlog}
-                        onEdit={(blog) => {
-                            setEditingBlog(blog);
-                            setIsModalOpen(true);
-                        }}
-                    />
-
-                    <BlogPagination
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        paginate={(pageNumber: number) => setCurrentPage(pageNumber)}
-                        indexOfFirstBlog={indexOfFirstBlog}
-                        indexOfLastBlog={indexOfLastBlog}
-                        totalBlogs={sortedBlogs.length}
-                    />
-
-                    <BlogFormModal
-                        isOpen={isModalOpen}
-                        onClose={() => setIsModalOpen(false)}
-                        onSave={handleSaveBlog}
-                        categories={categories}
-                        users={users}
-                        initialData={editingBlog}
-                    />
+        <div className="min-h-screen bg-gray-50 p-8">
+            <div className="max-w-7xl mx-auto space-y-6">
+                {/* Header */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                    <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                        <div className="p-2 bg-green-400 rounded-xl">
+                            <FileText className="w-7 h-7 text-white" />
+                        </div>
+                        Quản lý Blog
+                    </h1>
                 </div>
-            ) : (
-                <CategoryTable
-                    categories={categories}
-                    onUpdate={handleUpdateCategory}
-                    onDelete={handleDeleteCategory}
-                />
-            )}
+
+                {/* Tabs */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                    <nav className="flex">
+                        <button
+                            className={`flex-1 py-4 px-6 text-center font-semibold transition-all ${
+                                activeTab === "blogs"
+                                    ? "bg-green-400 text-white"
+                                    : "bg-white text-gray-600 hover:bg-gray-50"
+                            }`}
+                            onClick={() => setActiveTab("blogs")}
+                        >
+                            Danh sách blog
+                        </button>
+                        <button
+                            className={`flex-1 py-4 px-6 text-center font-semibold transition-all ${
+                                activeTab === "categories"
+                                    ? "bg-green-400 text-white"
+                                    : "bg-white text-gray-600 hover:bg-gray-50"
+                            }`}
+                            onClick={() => setActiveTab("categories")}
+                        >
+                            Danh mục
+                        </button>
+                    </nav>
+                </div>
+
+                {/* Content */}
+                {activeTab === "blogs" ? (
+                    <div className="space-y-6">
+                        {/* Enhanced Sort control and Add button */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                <button
+                                    onClick={() => {
+                                        setEditingBlog(null);
+                                        setIsModalOpen(true);
+                                    }}
+                                    className="px-6 py-3 bg-green-400 text-white font-semibold rounded-xl hover:bg-green-500 flex items-center gap-2 shadow-sm transition-all transform hover:scale-105"
+                                >
+                                    <PlusIcon className="w-5 h-5" />
+                                    <span>Thêm blog</span>
+                                </button>
+                                
+                                <div ref={sortRef} className="relative">
+                                    <button
+                                        onClick={() => setIsSortOpen(!isSortOpen)}
+                                        className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-2 border border-gray-200 hover:bg-gray-100 transition-colors"
+                                    >
+                                        <FunnelIcon className="w-5 h-5 text-gray-600" />
+                                        <span className="text-sm font-medium text-gray-700">{currentSortLabel}</span>
+                                        <svg className={`w-4 h-4 text-gray-600 transition-transform ${isSortOpen ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                                        </svg>
+                                    </button>
+                                    
+                                    {isSortOpen && (
+                                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 z-10 overflow-hidden">
+                                            {sortOptions.map((option) => (
+                                                <button
+                                                    key={option.value}
+                                                    onClick={() => {
+                                                        setSortField(option.value as any);
+                                                        setCurrentPage(1);
+                                                        setIsSortOpen(false);
+                                                    }}
+                                                    className={`block w-full text-left px-4 py-3 text-sm transition-colors ${
+                                                        sortField === option.value
+                                                            ? "bg-green-50 text-green-700 font-medium"
+                                                            : "text-gray-700 hover:bg-gray-50"
+                                                    }`}
+                                                >
+                                                    {option.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                            {isLoading ? (
+                                <div className="flex justify-center items-center h-64">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
+                                </div>
+                            ) : (
+                                <BlogTable
+                                    blogs={currentBlogs}
+                                    categories={categories}
+                                    users={users}
+                                    sortField={sortField}
+                                    sortDirection={sortDirection}
+                                    handleSort={handleSort}
+                                    handleDelete={handleDeleteBlog}
+                                    onEdit={(blog) => {
+                                        setEditingBlog(blog);
+                                        setIsModalOpen(true);
+                                    }}
+                                />
+                            )}
+                        </div>
+                        
+                        <BlogPagination 
+                            currentPage={currentPage} 
+                            totalPages={totalPages} 
+                            totalItems={sortedBlogs.length}
+                            itemsPerPage={blogsPerPage}
+                            onPageChange={(pageNumber: number) => setCurrentPage(pageNumber)}
+                        />
+
+                        <BlogFormModal
+                            isOpen={isModalOpen}
+                            onClose={() => setIsModalOpen(false)}
+                            onSave={handleSaveBlog}
+                            categories={categories}
+                            users={users}
+                            initialData={editingBlog}
+                        />
+                    </div>
+                ) : (
+                    <div className="space-y-6">
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                            <button
+                                onClick={() => {
+                                    // We need to trigger the CategoryTable's create function
+                                    // Since CategoryTable manages its own state, we'll need to pass a prop
+                                    // For now, we'll just open the modal directly
+                                    const event = new CustomEvent('openCategoryModal');
+                                    window.dispatchEvent(event);
+                                }}
+                                className="px-6 py-3 bg-green-400 text-white font-semibold rounded-xl hover:bg-green-500 flex items-center gap-2 shadow-sm transition-all transform hover:scale-105"
+                            >
+                                <PlusIcon className="w-5 h-5" />
+                                <span>Thêm danh mục</span>
+                            </button>
+                        </div>
+                        
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                            <CategoryTable
+                                categories={categories}
+                                onUpdate={handleUpdateCategory}
+                            />
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

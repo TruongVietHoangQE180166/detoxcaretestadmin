@@ -8,13 +8,21 @@ import UserManagement from "../pages/UserManagement";
 import OrderManagement from "../pages/OrderManagement";
 import Login from "../pages/Login";
 import PrivateRoute from "./PrivateRoute";
+import PublicRoute from "./PublicRoute";
 
 const AppRoutes = () => {
   return (
     <Router>
       <Routes>
-        {/* Public route */}
-        <Route path="/login" element={<Login />} />
+        {/* Public route - login page */}
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          }
+        />
 
         {/* Private routes */}
         <Route

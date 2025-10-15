@@ -1,9 +1,15 @@
-import type { JSX } from "react";
+import React from "react";
 import { Navigate } from "react-router-dom";
+import { useUserStore } from "../store/userStore";
 
-const PrivateRoute = ({ children }: { children: JSX.Element }) => {
+const PrivateRoute = ({ children }: { children: React.JSX.Element }) => {
+  const user = useUserStore((state) => state.user);
   const token = sessionStorage.getItem("accessToken");
-  return token ? children : <Navigate to="/login" replace />;
+
+  // Check if user is authenticated
+  const isAuthenticated = token && user;
+
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
-    
+
 export default PrivateRoute;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ProductTable from "../components/product/ProductTable";
 import type { Product, TypeProduct } from "../components/product/types";
 import Pagination from "../components/product/Pagination";
@@ -21,6 +21,8 @@ import {
 
 const ProductManagement = () => {
   const [activeTab, setActiveTab] = useState<"products" | "types">("products");
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const sortRef = useRef<HTMLDivElement>(null);
 
   // --- PRODUCTS ---
   const [allProducts, setAllProducts] = useState<Product[]>([]); // All products from API
@@ -294,105 +296,181 @@ const ProductManagement = () => {
     fetchTypeProducts();
   }, []);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sortRef.current && !sortRef.current.contains(event.target as Node)) {
+        setIsSortOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const sortOptions = [
+    { value: "none", label: "Sắp xếp" },
+    { value: "name", label: "Theo tên" },
+    { value: "price", label: "Theo giá" },
+    { value: "status", label: "Theo trạng thái" },
+  ];
+
+  const currentSortLabel = sortOptions.find(option => option.value === sortOption)?.label || "Sắp xếp";
+
   return (
-    <div className="p-8 space-y-6">
-      <h1 className="text-3xl font-bold text-green-600 flex items-center gap-3">
-        <Package className="w-8 h-8" />
-        Quản lý Sản phẩm
-      </h1>
-
-      {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="flex gap-6">
-          <button
-            className={`pb-2 ${activeTab === "products" ? "border-b-2 border-green-600 text-green-600 font-semibold" : "text-gray-600"}`}
-            onClick={() => setActiveTab("products")}
-          >
-            Danh sách sản phẩm
-          </button>
-          <button
-            className={`pb-2 ${activeTab === "types" ? "border-b-2 border-green-600 text-green-600 font-semibold" : "text-gray-600"}`}
-            onClick={() => setActiveTab("types")}
-          >
-            Loại sản phẩm
-          </button>
-        </nav>
-      </div>
-
-      {/* Content */}
-      {activeTab === "products" && (
-        <>
-          {/* Enhanced Sort control and Add button */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 p-4 bg-white rounded-xl shadow-sm border border-gray-100">
-            <div>
-              <button
-                onClick={() => { setEditingProduct(null); setIsModalOpen(true); }}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 shadow-sm transition-colors"
-              >
-                <PlusIcon className="w-5 h-5" />
-                <span>Thêm sản phẩm</span>
-              </button>
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+            <div className="p-2 bg-green-400 rounded-xl">
+              <Package className="w-7 h-7 text-white" />
             </div>
-            <div className="flex items-center gap-2">
-              <FunnelIcon className="w-5 h-5 text-gray-500" />
-              <select
-                value={sortOption}
-                onChange={(e) => { setSortOption(e.target.value as any); setCurrentProductPage(1); }}
-                className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              >
-                <option value="none">-- Sắp xếp --</option>
-                <option value="name">Theo tên</option>
-                <option value="price">Theo giá</option>
-                <option value="status">Theo trạng thái</option>
-              </select>
+            Quản lý Sản phẩm
+          </h1>
+        </div>
+
+        {/* Tabs */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <nav className="flex">
+            <button
+              className={`flex-1 py-4 px-6 text-center font-semibold transition-all ${
+                activeTab === "products"
+                  ? "bg-green-400 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+              onClick={() => setActiveTab("products")}
+            >
+              Danh sách sản phẩm
+            </button>
+            <button
+              className={`flex-1 py-4 px-6 text-center font-semibold transition-all ${
+                activeTab === "types"
+                  ? "bg-green-400 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+              onClick={() => setActiveTab("types")}
+            >
+              Loại sản phẩm
+            </button>
+          </nav>
+        </div>
+
+        {/* Content */}
+        {activeTab === "products" && (
+          <div className="space-y-6">
+            {/* Enhanced Sort control and Add button */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <button
+                  onClick={() => { setEditingProduct(null); setIsModalOpen(true); }}
+                  className="px-6 py-3 bg-green-400 text-white font-semibold rounded-xl hover:bg-green-500 flex items-center gap-2 shadow-sm transition-all transform hover:scale-105"
+                >
+                  <PlusIcon className="w-5 h-5" />
+                  <span>Thêm sản phẩm</span>
+                </button>
+                
+                <div ref={sortRef} className="relative">
+                  <button
+                    onClick={() => setIsSortOpen(!isSortOpen)}
+                    className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-2 border border-gray-200 hover:bg-gray-100 transition-colors"
+                  >
+                    <FunnelIcon className="w-5 h-5 text-gray-600" />
+                    <span className="text-sm font-medium text-gray-700">{currentSortLabel}</span>
+                    <svg className={`w-4 h-4 text-gray-600 transition-transform ${isSortOpen ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  
+                  {isSortOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 z-10 overflow-hidden">
+                      {sortOptions.map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => {
+                            setSortOption(option.value as any);
+                            setCurrentProductPage(1);
+                            setIsSortOpen(false);
+                          }}
+                          className={`block w-full text-left px-4 py-3 text-sm transition-colors ${
+                            sortOption === option.value
+                              ? "bg-green-50 text-green-700 font-medium"
+                              : "text-gray-700 hover:bg-gray-50"
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <ProductTable
+                products={products}
+                onEdit={(p) => { setEditingProduct(p); setIsModalOpen(true); }}
+                onDelete={handleDeleteProduct}
+              />
+            </div>
+            
+            <Pagination 
+              currentPage={currentProductPage} 
+              totalPages={totalProductPages} 
+              totalItems={allProducts.length}
+              itemsPerPage={productsPerPage}
+              onPageChange={setCurrentProductPage} 
+            />
+
+            <ProductFormModal
+              isOpen={isModalOpen}
+              onClose={() => setIsModalOpen(false)}
+              onSave={handleSaveProduct}
+              editingProduct={editingProduct}
+              typeProducts={allTypeProducts}
+            />
           </div>
+        )}
 
-          <ProductTable
-            products={products}
-            onEdit={(p) => { setEditingProduct(p); setIsModalOpen(true); }}
-            onDelete={handleDeleteProduct}
-          />
-          <Pagination currentPage={currentProductPage} totalPages={totalProductPages} onPageChange={setCurrentProductPage} />
-
-          <ProductFormModal
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            onSave={handleSaveProduct}
-            editingProduct={editingProduct}
-            typeProducts={allTypeProducts}
-          />
-        </>
-      )}
-
-      {activeTab === "types" && (
-        <>
-          <div className="flex justify-between items-center mb-6 p-4 bg-white rounded-xl shadow-sm border border-gray-100">
-            <div>
+        {activeTab === "types" && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <button
                 onClick={() => { setEditingType(null); setIsTypeModalOpen(true); }}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 shadow-sm transition-colors"
+                className="px-6 py-3 bg-green-400 text-white font-semibold rounded-xl hover:bg-green-500 flex items-center gap-2 shadow-sm transition-all transform hover:scale-105"
               >
                 <PlusIcon className="w-5 h-5" />
                 <span>Thêm loại sản phẩm</span>
               </button>
             </div>
-          </div>
-          
-          <TypeProductTable
-            typeProducts={typeProducts}
-            onEdit={(tp) => { setEditingType(tp); setIsTypeModalOpen(true); }}
-          />
-          <Pagination currentPage={currentTypePage} totalPages={totalTypePages} onPageChange={setCurrentTypePage} />
+            
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <TypeProductTable
+                typeProducts={typeProducts}
+                onEdit={(tp) => { setEditingType(tp); setIsTypeModalOpen(true); }}
+              />
+            </div>
+            
+            <Pagination 
+              currentPage={currentTypePage} 
+              totalPages={totalTypePages} 
+              totalItems={allTypeProducts.length}
+              itemsPerPage={typeProductsPerPage}
+              onPageChange={setCurrentTypePage} 
+            />
 
-          <TypeProductFormModal
-            isOpen={isTypeModalOpen}
-            onClose={() => setIsTypeModalOpen(false)}
-            onSave={handleSaveType}
-            editingTypeProduct={editingType}
-          />
-        </>
-      )}
+            <TypeProductFormModal
+              isOpen={isTypeModalOpen}
+              onClose={() => setIsTypeModalOpen(false)}
+              onSave={handleSaveType}
+              editingTypeProduct={editingType}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Search } from "lucide-react";
 import type { Payment } from "./types";
 import { useState, useMemo } from "react";

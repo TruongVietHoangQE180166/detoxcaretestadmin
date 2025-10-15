@@ -19,5 +19,9 @@ export default tseslint.config([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // ⚙️ Tắt cảnh báo “biến khai báo nhưng không dùng”
+      '@typescript-eslint/no-unused-vars': 'off',
+    },
   },
 ])

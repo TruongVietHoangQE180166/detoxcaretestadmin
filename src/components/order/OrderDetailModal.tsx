@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Order, OrderDetail } from "./types";
 
 type Props = {

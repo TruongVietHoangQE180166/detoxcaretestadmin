@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-type PaginationProps = {
+type UserPaginationProps = {
   currentPage: number;
   totalPages: number;
   totalItems: number;
@@ -8,7 +8,7 @@ type PaginationProps = {
   onPageChange: (page: number) => void;
 };
 
-const Pagination = ({ currentPage, totalPages, totalItems, itemsPerPage, onPageChange }: PaginationProps) => {
+const UserPagination = ({ currentPage, totalPages, totalItems, itemsPerPage, onPageChange }: UserPaginationProps) => {
   // Don't show pagination if there's only one page
   if (totalPages <= 1) return null;
 
@@ -75,7 +75,7 @@ const Pagination = ({ currentPage, totalPages, totalItems, itemsPerPage, onPageC
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
       {/* Page info */}
       <div className="text-sm text-gray-600">
-        Hiển thị <span className="font-medium">{startItem}</span> đến <span className="font-medium">{endItem}</span> trong tổng số <span className="font-medium">{totalItems}</span> sản phẩm
+        Hiển thị <span className="font-medium">{startItem}</span> đến <span className="font-medium">{endItem}</span> trong tổng số <span className="font-medium">{totalItems}</span> người dùng
       </div>
 
       <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -153,4 +153,4 @@ const Pagination = ({ currentPage, totalPages, totalItems, itemsPerPage, onPageC
   );
 };
 
-export default Pagination;
+export default UserPagination;
