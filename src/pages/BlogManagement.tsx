@@ -3,6 +3,7 @@ import BlogSearchBar from "../components/blog/BlogSearchBar";
 import BlogTable from "../components/blog/BlogTable";
 import BlogPagination from "../components/blog/BlogPagination";
 import BlogFormModal from "../components/blog/BlogFormModal";
+import BlogDetail from "../components/blog/BlogDetail";
 import CategoryTable from "../components/blog/CategoryTable";
 import type { User } from "../components/user/types";
 import { FileText, PlusIcon, FunnelIcon } from "lucide-react";
@@ -36,6 +37,7 @@ interface CategoryApiResponse {
 const BlogManagement = () => {
     const [activeTab, setActiveTab] = useState<"blogs" | "categories">("blogs");
     const [isSortOpen, setIsSortOpen] = useState(false);
+    const [selectedBlog, setSelectedBlog] = useState<BlogApiResponse | null>(null);
     const sortRef = useRef<HTMLDivElement>(null);
     
     const [blogs, setBlogs] = useState<BlogApiResponse[]>([]);
@@ -137,8 +139,8 @@ const BlogManagement = () => {
                 // Call the deleteBlog API
                 await deleteBlog(id);
                 
-                // Remove the blog from the list
-                setBlogs(blogs.filter((b) => b.id !== id));
+                // Refresh the blog list
+                await fetchBlogs();
                 addToast("Blog đã được xóa thành công!", "success");
             } catch (error) {
                 console.error("Error deleting blog:", error);
@@ -203,6 +205,9 @@ const BlogManagement = () => {
                 setBlogs([...blogs, newBlog]);
                 addToast("Blog đã được tạo thành công!", "success");
             }
+            
+            // Refresh the blog list to ensure consistency
+            await fetchBlogs();
         } catch (error) {
             console.error("Error saving blog:", error);
             if (editingBlog) {
@@ -263,6 +268,14 @@ const BlogManagement = () => {
             addToast("Có lỗi xảy ra khi lưu danh mục. Vui lòng thử lại.", "error");
             throw error; // Re-throw the error so the modal knows about it
         }
+    };
+
+    const handleViewBlogDetails = (blog: BlogApiResponse) => {
+        setSelectedBlog(blog);
+    };
+
+    const handleBackFromBlogDetail = () => {
+        setSelectedBlog(null);
     };
 
     // Close dropdown when clicking outside
@@ -382,35 +395,46 @@ const BlogManagement = () => {
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                            {isLoading ? (
-                                <div className="flex justify-center items-center h-64">
-                                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
+                        {/* Blog Detail View or Blog Table */}
+                        {selectedBlog ? (
+                            <BlogDetail 
+                                blog={selectedBlog} 
+                                onBack={handleBackFromBlogDetail} 
+                            />
+                        ) : (
+                            <>
+                                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                                    {isLoading ? (
+                                        <div className="flex justify-center items-center h-64">
+                                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
+                                        </div>
+                                    ) : (
+                                        <BlogTable
+                                            blogs={currentBlogs}
+                                            categories={categories}
+                                            users={users}
+                                            sortField={sortField}
+                                            sortDirection={sortDirection}
+                                            handleSort={handleSort}
+                                            handleDelete={handleDeleteBlog}
+                                            onEdit={(blog) => {
+                                                setEditingBlog(blog);
+                                                setIsModalOpen(true);
+                                            }}
+                                            onViewDetails={handleViewBlogDetails}
+                                        />
+                                    )}
                                 </div>
-                            ) : (
-                                <BlogTable
-                                    blogs={currentBlogs}
-                                    categories={categories}
-                                    users={users}
-                                    sortField={sortField}
-                                    sortDirection={sortDirection}
-                                    handleSort={handleSort}
-                                    handleDelete={handleDeleteBlog}
-                                    onEdit={(blog) => {
-                                        setEditingBlog(blog);
-                                        setIsModalOpen(true);
-                                    }}
+                                
+                                <BlogPagination 
+                                    currentPage={currentPage} 
+                                    totalPages={totalPages} 
+                                    totalItems={sortedBlogs.length}
+                                    itemsPerPage={blogsPerPage}
+                                    onPageChange={(pageNumber: number) => setCurrentPage(pageNumber)}
                                 />
-                            )}
-                        </div>
-                        
-                        <BlogPagination 
-                            currentPage={currentPage} 
-                            totalPages={totalPages} 
-                            totalItems={sortedBlogs.length}
-                            itemsPerPage={blogsPerPage}
-                            onPageChange={(pageNumber: number) => setCurrentPage(pageNumber)}
-                        />
+                            </>
+                        )}
 
                         <BlogFormModal
                             isOpen={isModalOpen}

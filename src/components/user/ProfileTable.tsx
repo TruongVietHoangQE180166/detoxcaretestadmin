@@ -1,10 +1,13 @@
-import type { Profile } from "./types";
+import type { Profile, Address } from "./types";
+import { EyeIcon } from "@heroicons/react/24/outline";
 
 interface Props {
   profiles: Profile[];
+  onViewDetails: (profile: Profile) => void;
+  loading: boolean;
 }
 
-const ProfileTable = ({ profiles }: Props) => {
+const ProfileTable = ({ profiles, onViewDetails, loading }: Props) => {
   // Hàm định dạng ngày và giới tính
   const formatValue = (value: string | undefined, type: "date" | "gender") => {
     if (!value) return "N/A";
@@ -13,24 +16,31 @@ const ProfileTable = ({ profiles }: Props) => {
       : value === "male" ? "Nam" : value === "female" ? "Nữ" : value;
   };
 
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center p-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead className="bg-gray-900 text-white">
             <tr>
-              <th className="p-4 font-semibold text-sm">#</th>
               <th className="p-4 font-semibold text-sm">Avatar</th>
-              <th className="p-4 font-semibold text-sm">Full Name</th>
-              <th className="p-4 font-semibold text-sm">Gender</th>
-              <th className="p-4 font-semibold text-sm">Nick Name</th>
-              <th className="p-4 font-semibold text-sm">Phone</th>
+              <th className="p-4 font-semibold text-sm">Họ và tên</th>
+              <th className="p-4 font-semibold text-sm">Giới tính</th>
+              <th className="p-4 font-semibold text-sm">Biệt danh</th>
+              <th className="p-4 font-semibold text-sm">Số điện thoại</th>
+              <th className="p-4 font-semibold text-sm text-center">Hành động</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {profiles.map((p, index) => (
               <tr key={p.id} className="hover:bg-gray-50 transition-colors">
-                <td className="p-4 text-sm text-gray-600 font-medium">{index + 1}</td>
                 <td className="p-4">
                   <img
                     src={p.avatar || "https://via.placeholder.com/40?text=No+Avatar"}
@@ -58,10 +68,21 @@ const ProfileTable = ({ profiles }: Props) => {
                 <td className="p-4 text-sm text-gray-600 max-w-xs truncate">
                   {p.phoneNumber || "N/A"}
                 </td>
+                <td className="p-4 align-middle">
+                  <div className="flex justify-center">
+                    <button 
+                      onClick={() => onViewDetails(p)}
+                      className="p-2 bg-green-400 text-white rounded-lg hover:bg-green-500 transition-all transform hover:scale-110 shadow-sm"
+                      title="Xem chi tiết"
+                    >
+                      <EyeIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
 
-            {profiles.length === 0 && (
+            {profiles.length === 0 && !loading && (
               <tr>
                 <td colSpan={6} className="p-12 text-center">
                   <div className="flex flex-col items-center gap-3">

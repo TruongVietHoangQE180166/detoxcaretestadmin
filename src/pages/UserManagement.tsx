@@ -5,7 +5,8 @@ import UserTable from "../components/user/UserTable";
 import UserPagination from "../components/user/UserPagination";
 import ProfileTable from "../components/user/ProfileTable";
 import ProfilePagination from "../components/user/ProfilePagination";
-import { getAllUser } from "../services/users";
+import ProfileDetail from "../components/user/ProfileDetail";
+import { getAllUser, updateUserStatus } from "../services/users";
 import { useToast } from "../components/common/ToastContext";
 import { getAllProfile } from "../services/profile";
 
@@ -15,6 +16,8 @@ const UserManagement = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [profileCurrentPage, setProfileCurrentPage] = useState(1);
   const [profileSearchTerm, setProfileSearchTerm] = useState("");
@@ -38,7 +41,7 @@ const UserManagement = () => {
     return result;
   }, [users, search]);
 
-  // Process profiles with search only
+  // Process profiles with search
   const processedProfiles = useMemo(() => {
     let result = [...profiles];
 
@@ -70,7 +73,7 @@ const UserManagement = () => {
   const fetchDataUserGetAll = async () => {
     try {
       setLoading(true);
-      const data = await getAllUser({ page: 1, size: 10 });
+      const data = await getAllUser({ page: 1, size: 1000 });
       console.log("data user", data);
       setUsers(data.data.content);
     } catch (error) {
@@ -83,7 +86,7 @@ const UserManagement = () => {
   const fetchDataProfileGetAll = async () => {
     try {
       setLoading(true);
-      const data = await getAllProfile({ page: 1, size: 10 });
+      const data = await getAllProfile({ page: 1, size: 1000 });
       setProfiles(data.data.content);
     } catch (error) {
       addToast("Lỗi khi tải user", "error");
@@ -91,6 +94,39 @@ const UserManagement = () => {
       setLoading(false);
     }
   }
+
+  const handleBanUnbanUser = async (userId: string, status: 'ACTIVE' | 'INACTIVE') => {
+    try {
+      setUpdating(true);
+      await updateUserStatus(userId, status);
+      
+      // Update the user status in the local state
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === userId ? { ...user, status } : user
+        )
+      );
+      
+      addToast(
+        status === 'ACTIVE' 
+          ? 'Tài khoản đã được kích hoạt!' 
+          : 'Tài khoản đã bị khóa!', 
+        'success'
+      );
+    } catch (error) {
+      addToast("Lỗi khi cập nhật trạng thái user", "error");
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  const handleViewProfileDetails = (profile: Profile) => {
+    setSelectedProfile(profile);
+  };
+
+  const handleBackFromProfileDetail = () => {
+    setSelectedProfile(null);
+  };
 
   useEffect(() => {
     fetchDataUserGetAll();
@@ -161,17 +197,33 @@ const UserManagement = () => {
               </div>
             </div>
             
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <UserTable users={currentUsers} />
-            </div>
+            {/* Loading indicator */}
+            {loading && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex justify-center items-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+              </div>
+            )}
             
-            <UserPagination 
-              currentPage={currentPage}
-              totalPages={userTotalPages}
-              totalItems={filteredUsers.length}
-              itemsPerPage={usersPerPage}
-              onPageChange={setCurrentPage}
-            />
+            {/* User Table */}
+            {!loading && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                <UserTable 
+                  users={currentUsers} 
+                  onBanUnban={handleBanUnbanUser}
+                  isUpdating={updating}
+                />
+              </div>
+            )}
+            
+            {!loading && (
+              <UserPagination 
+                currentPage={currentPage}
+                totalPages={userTotalPages}
+                totalItems={filteredUsers.length}
+                itemsPerPage={usersPerPage}
+                onPageChange={setCurrentPage}
+              />
+            )}
           </div>
         )}
 
@@ -197,17 +249,45 @@ const UserManagement = () => {
               </div>
             </div>
             
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <ProfileTable profiles={currentProfiles} />
-            </div>
-            
-            <ProfilePagination 
-              currentPage={profileCurrentPage}
-              totalPages={profileTotalPages}
-              totalItems={processedProfiles.length}
-              itemsPerPage={profilesPerPage}
-              onPageChange={setProfileCurrentPage}
-            />
+            {/* Profile Detail View */}
+            {selectedProfile ? (
+              <ProfileDetail 
+                profile={selectedProfile} 
+                onBack={handleBackFromProfileDetail} 
+              />
+            ) : (
+              <>
+                {/* Loading indicator for profiles */}
+                {loading && (
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                    <div className="flex justify-center items-center p-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Profile Table */}
+                {!loading && (
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                    <ProfileTable 
+                      profiles={currentProfiles} 
+                      onViewDetails={handleViewProfileDetails}
+                      loading={false}
+                    />
+                  </div>
+                )}
+                
+                {!loading && (
+                  <ProfilePagination 
+                    currentPage={profileCurrentPage}
+                    totalPages={profileTotalPages}
+                    totalItems={processedProfiles.length}
+                    itemsPerPage={profilesPerPage}
+                    onPageChange={setProfileCurrentPage}
+                  />
+                )}
+              </>
+            )}
           </div>
         )}
       </div>

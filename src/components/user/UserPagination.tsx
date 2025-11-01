@@ -38,31 +38,19 @@ const UserPagination = ({ currentPage, totalPages, totalItems, itemsPerPage, onP
     }
   };
 
-  // Generate page numbers to display
+  // Generate only current page and next page
   const getPageNumbers = () => {
-    const delta = 2; // Number of pages to show around current page
-    const range = [];
-    const rangeWithDots = [];
-
-    for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
-      range.push(i);
+    const pages = [];
+    
+    // Always show current page
+    pages.push(currentPage);
+    
+    // Show next page if it exists
+    if (currentPage < totalPages) {
+      pages.push(currentPage + 1);
     }
-
-    if (currentPage - delta > 2) {
-      rangeWithDots.push(1, '...');
-    } else {
-      rangeWithDots.push(1);
-    }
-
-    rangeWithDots.push(...range);
-
-    if (currentPage + delta < totalPages - 1) {
-      rangeWithDots.push('...', totalPages);
-    } else if (totalPages > 1) {
-      rangeWithDots.push(totalPages);
-    }
-
-    return rangeWithDots;
+    
+    return pages;
   };
 
   const pageNumbers = getPageNumbers();
@@ -110,30 +98,20 @@ const UserPagination = ({ currentPage, totalPages, totalItems, itemsPerPage, onP
             ← Trước
           </button>
 
-          {/* Page numbers */}
-          {pageNumbers.map((page, index) => {
-            if (page === '...') {
-              return (
-                <span key={`ellipsis-${index}`} className="px-4 py-2 text-gray-500">
-                  ...
-                </span>
-              );
-            }
-
-            return (
-              <button
-                key={page as number}
-                onClick={() => onPageChange(page as number)}
-                className={`px-4 py-2 rounded-xl transition-all ${
-                  page === currentPage
-                    ? "bg-green-500 text-white font-medium shadow-md hover:bg-green-600"
-                    : "bg-white text-gray-700 hover:bg-green-50 hover:text-green-600 border border-gray-200 shadow-sm"
-                }`}
-              >
-                {page}
-              </button>
-            );
-          })}
+          {/* Page numbers - only current and next page */}
+          {pageNumbers.map((page) => (
+            <button
+              key={page}
+              onClick={() => onPageChange(page)}
+              className={`px-4 py-2 rounded-xl transition-all ${
+                page === currentPage
+                  ? "bg-green-500 text-white font-medium shadow-md hover:bg-green-600"
+                  : "bg-white text-gray-700 hover:bg-green-50 hover:text-green-600 border border-gray-200 shadow-sm"
+              }`}
+            >
+              {page}
+            </button>
+          ))}
 
           {/* Next button */}
           <button

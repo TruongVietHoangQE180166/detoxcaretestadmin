@@ -1,27 +1,25 @@
 import type { Product } from "./types";
-import { PencilSquareIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { PencilSquareIcon, TrashIcon, EyeIcon } from "@heroicons/react/24/outline";
 
 type Props = {
   products: Product[];
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
+  onViewDetails: (product: Product) => void;
 };
 
-const ProductTable = ({ products, onEdit, onDelete }: Props) => {
+const ProductTable = ({ products, onEdit, onDelete, onViewDetails }: Props) => {
   return (
     <div className="overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead className="bg-gray-900 text-white">
             <tr>
-              <th className="p-4 font-semibold text-sm">#</th>
               <th className="p-4 font-semibold text-sm">Ảnh</th>
               <th className="p-4 font-semibold text-sm">Tên sản phẩm</th>
               <th className="p-4 font-semibold text-sm">Loại</th>
               <th className="p-4 font-semibold text-sm">Giá gốc</th>
               <th className="p-4 font-semibold text-sm">Giá KM</th>
-              <th className="p-4 font-semibold text-sm">Đã bán</th>
-              <th className="p-4 font-semibold text-sm">Đánh giá</th>
               <th className="p-4 font-semibold text-sm">Trạng thái</th>
               <th className="p-4 font-semibold text-sm text-center">Hành động</th>
             </tr>
@@ -29,7 +27,6 @@ const ProductTable = ({ products, onEdit, onDelete }: Props) => {
           <tbody className="divide-y divide-gray-200">
             {products.map((p, index) => (
               <tr key={p.id} className="hover:bg-gray-50 transition-colors">
-                <td className="p-4 text-sm text-gray-600 font-medium">{index + 1}</td>
                 <td className="p-4">
                   <div className="w-12 h-12 rounded-lg overflow-hidden border-2 border-gray-200">
                     <img
@@ -53,14 +50,6 @@ const ProductTable = ({ products, onEdit, onDelete }: Props) => {
                 <td className="p-4 text-sm text-green-400 font-bold max-w-[120px] truncate">
                   {p.salePrice.toLocaleString()} đ
                 </td>
-                <td className="p-4 text-sm text-gray-600 font-medium">
-                  {p.statisticsRate?.totalSale || 0}
-                </td>
-                <td className="p-4 text-sm">
-                  <span className="inline-flex items-center gap-1 bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold border border-yellow-200">
-                    ⭐ {p.statisticsRate?.averageRate?.toFixed(1) || 0}
-                  </span>
-                </td>
                 <td className="p-4">
                   {p.active ? (
                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 text-green-600 rounded-full text-xs font-semibold border border-green-200">
@@ -76,6 +65,13 @@ const ProductTable = ({ products, onEdit, onDelete }: Props) => {
                 </td>
                 <td className="p-4 align-middle">
                   <div className="flex justify-center gap-2">
+                    <button
+                      onClick={() => onViewDetails(p)}
+                      className="p-2 bg-blue-400 text-white rounded-lg hover:bg-blue-500 transition-all transform hover:scale-110 shadow-sm"
+                      title="Xem chi tiết"
+                    >
+                      <EyeIcon className="w-4 h-4" />
+                    </button>
                     <button
                       onClick={() => onEdit(p)}
                       className="p-2 bg-green-400 text-white rounded-lg hover:bg-green-500 transition-all transform hover:scale-110 shadow-sm"
@@ -97,7 +93,7 @@ const ProductTable = ({ products, onEdit, onDelete }: Props) => {
 
             {products.length === 0 && (
               <tr>
-                <td colSpan={10} className="p-12 text-center">
+                <td colSpan={7} className="p-12 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
                       <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

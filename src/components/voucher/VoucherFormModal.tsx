@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { XMarkIcon, PhotoIcon, CloudArrowUpIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, PhotoIcon } from "@heroicons/react/24/outline";
 import { createVoucher, updateVoucher, uploadVoucherImage } from "../../services/vouCher";
 import type { IVoucher } from "../../services/vouCher/IVoucher";
 import { useToast } from "../common/ToastContext";
@@ -23,6 +23,7 @@ const VoucherFormModal = ({ voucher, onSave, onClose }: Props) => {
   });
   
   const [imagePreview, setImagePreview] = useState<string>(voucher?.image || "");
+  const [tempImagePreview, setTempImagePreview] = useState<string>(""); // For temporary preview during upload
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -52,6 +53,7 @@ const VoucherFormModal = ({ voucher, onSave, onClose }: Props) => {
       });
       setImagePreview("");
     }
+    setTempImagePreview(""); // Clear temporary preview
     setError(null);
   }, [voucher]);
 
@@ -63,31 +65,34 @@ const VoucherFormModal = ({ voucher, onSave, onClose }: Props) => {
     }));
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Create preview
+      // Create temporary preview
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        setTempImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
-    }
-  };
-
-  const handleUploadImage = async () => {
-    const file = fileInputRef.current?.files?.[0];
-    if (file) {
+      
+      // Automatically upload the image
       try {
         setIsUploading(true);
         const imageUrl = await uploadVoucherImage(file);
         // Update the form with the uploaded image URL
         setForm(prev => ({ ...prev, image: imageUrl }));
         setImagePreview(imageUrl);
+        setTempImagePreview(""); // Clear temporary preview
         addToast("Upload ảnh thành công!", "success");
       } catch (error: any) {
         addToast(`Lỗi khi upload ảnh: ${error.message || 'Đã có lỗi xảy ra'}`, "error");
         console.error("Error uploading image:", error);
+        setImagePreview("");
+        setTempImagePreview("");
+        setForm(prev => ({ ...prev, image: "" }));
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
       } finally {
         setIsUploading(false);
       }
@@ -124,6 +129,7 @@ const VoucherFormModal = ({ voucher, onSave, onClose }: Props) => {
     const validationError = validateForm();
     if (validationError) {
       setError(validationError);
+      addToast(validationError, "error");
       return;
     }
     
@@ -139,10 +145,10 @@ const VoucherFormModal = ({ voucher, onSave, onClose }: Props) => {
       
       // Assuming the API returns the created/updated voucher with an ID
       onSave(res.data);
+      addToast(`${voucher ? "Cập nhật" : "Tạo"} voucher thành công!`, "success");
       onClose();
-      // The parent component will handle the toast notification
     } catch (error: any) {
-      // The parent component will handle the toast notification
+      addToast(`Lỗi khi ${voucher ? "cập nhật" : "tạo"} voucher: ${error.message || 'Đã có lỗi xảy ra'}`, "error");
       console.error(`Lỗi khi ${voucher ? "cập nhật" : "tạo"} voucher`, error);
     }
   };
@@ -276,7 +282,7 @@ const VoucherFormModal = ({ voucher, onSave, onClose }: Props) => {
                   Ảnh voucher
                 </label>
                 
-                {/* Image Preview */}
+                {/* Image Preview - Only show after successful upload */}
                 {imagePreview && (
                   <div className="mb-4 flex justify-center">
                     <div className="relative">
@@ -296,13 +302,15 @@ const VoucherFormModal = ({ voucher, onSave, onClose }: Props) => {
                   </div>
                 )}
 
-                {/* File Input + Upload Button */}
+                {/* File Input */}
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex-1">
                     <label className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl hover:border-green-400 transition-colors cursor-pointer bg-gray-50 hover:bg-gray-100">
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <PhotoIcon className="w-5 h-5" />
-                        <span className="font-medium">Chọn ảnh</span>
+                        <span className="font-medium">
+                          {isUploading ? "Đang tải..." : "Chọn ảnh"}
+                        </span>
                       </div>
                       <input
                         type="file"
@@ -310,31 +318,30 @@ const VoucherFormModal = ({ voucher, onSave, onClose }: Props) => {
                         onChange={handleImageChange}
                         accept="image/*"
                         className="hidden"
+                        disabled={isUploading}
                       />
                     </label>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleUploadImage}
-                    disabled={isUploading || !fileInputRef.current?.files?.[0]}
-                    className="px-6 py-3 bg-green-400 text-white font-semibold rounded-xl hover:bg-green-500 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-sm"
-                  >
-                    {isUploading ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Đang tải...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CloudArrowUpIcon className="w-5 h-5" />
-                        <span>Upload</span>
-                      </>
-                    )}
-                  </button>
                 </div>
                 <p className="mt-2 text-xs text-gray-500">
                   Định dạng: JPG, PNG, GIF. Kích thước tối đa: 5MB
                 </p>
+                
+                {/* Temporary preview during upload */}
+                {tempImagePreview && isUploading && (
+                  <div className="mt-4 flex justify-center">
+                    <div className="relative">
+                      <img
+                        src={tempImagePreview}
+                        alt="Uploading preview"
+                        className="w-32 h-32 object-cover rounded-xl border-4 border-gray-200 shadow-md opacity-50"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -28,7 +28,7 @@ const VoucherManagement = () => {
     try {
       await getAllVouchers();
       setIsModalOpen(false);
-      addToast("Cập nhật voucher thành công!", "success");
+      // Toast notification is handled in the VoucherFormModal component
     } catch (error) {
       addToast("Có lỗi xảy ra khi cập nhật danh sách voucher", "error");
     }

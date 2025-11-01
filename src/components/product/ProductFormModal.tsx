@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import type { Product, TypeProduct } from "./types";
 import { uploadProductImage } from "../../services/product/productService";
-import { XMarkIcon, CloudArrowUpIcon, PhotoIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, PhotoIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
+import { useToast } from "../common/ToastContext";
 
 type Props = {
   isOpen: boolean;
@@ -29,11 +30,13 @@ const ProductFormModal = ({ isOpen, onClose, onSave, editingProduct, typeProduct
   });
   
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [tempImagePreview, setTempImagePreview] = useState<string>(""); // For temporary preview during upload
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isTypeProductOpen, setIsTypeProductOpen] = useState(false);
   const typeProductRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { addToast } = useToast();
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -71,36 +74,39 @@ const ProductFormModal = ({ isOpen, onClose, onSave, editingProduct, typeProduct
       });
       setImagePreview("");
     }
+    setTempImagePreview(""); // Clear temporary preview
     setError(null);
   }, [editingProduct]);
 
   if (!isOpen) return null;
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Create preview
+      // Create temporary preview
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        setTempImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
-    }
-  };
-
-  const handleUploadImage = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    const file = fileInputRef.current?.files?.[0];
-    if (file) {
+      
+      // Automatically upload the image
       try {
         setIsUploading(true);
         const imageUrl = await uploadProductImage(file);
         setForm({ ...form, image: imageUrl });
-        setImagePreview(imageUrl);
+        setImagePreview(imageUrl); // Set the final preview only after successful upload
+        setTempImagePreview(""); // Clear temporary preview
+        addToast("Upload ảnh thành công!", "success");
       } catch (error) {
         console.error("Error uploading image:", error);
-        setError("Có lỗi xảy ra khi tải ảnh lên. Vui lòng thử lại.");
+        addToast("Có lỗi xảy ra khi tải ảnh lên. Vui lòng thử lại.", "error");
         setImagePreview("");
+        setTempImagePreview("");
+        setForm({ ...form, image: "" });
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
       } finally {
         setIsUploading(false);
       }
@@ -140,19 +146,32 @@ const ProductFormModal = ({ isOpen, onClose, onSave, editingProduct, typeProduct
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const isEditing = !!editingProduct;
     const validationError = validateForm(isEditing);
     
     if (validationError) {
       setError(validationError);
+      addToast(validationError, "error");
       return;
     }
     
     setError(null);
-    onSave(form);
-    onClose();
+    
+    try {
+      onSave(form);
+      addToast(
+        isEditing 
+          ? "Cập nhật sản phẩm thành công!" 
+          : "Thêm sản phẩm thành công!", 
+        "success"
+      );
+      onClose();
+    } catch (error) {
+      console.error("Error saving product:", error);
+      addToast("Có lỗi xảy ra khi lưu sản phẩm. Vui lòng thử lại.", "error");
+    }
   };
 
   return (
@@ -312,7 +331,7 @@ const ProductFormModal = ({ isOpen, onClose, onSave, editingProduct, typeProduct
                   Ảnh sản phẩm
                 </label>
                 
-                {/* Image Preview */}
+                {/* Image Preview - Only show after successful upload */}
                 {imagePreview && (
                   <div className="mb-4 flex justify-center">
                     <div className="relative">
@@ -321,20 +340,32 @@ const ProductFormModal = ({ isOpen, onClose, onSave, editingProduct, typeProduct
                         alt="Preview"
                         className="w-32 h-32 object-cover rounded-xl border-4 border-gray-200 shadow-md"
                       />
-                      <div className="absolute -top-2 -right-2 bg-green-400 text-white p-1 rounded-full">
-                        <PhotoIcon className="w-4 h-4" />
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImagePreview("");
+                          setForm({ ...form, image: "" });
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = "";
+                          }
+                        }}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
+                      >
+                        <XMarkIcon className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 )}
 
-                {/* File Input + Upload Button */}
+                {/* File Input */}
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex-1">
                     <label className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl hover:border-green-400 transition-colors cursor-pointer bg-gray-50 hover:bg-gray-100">
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <PhotoIcon className="w-5 h-5" />
-                        <span className="font-medium">Chọn ảnh</span>
+                        <span className="font-medium">
+                          {isUploading ? "Đang tải..." : "Chọn ảnh"}
+                        </span>
                       </div>
                       <input
                         type="file"
@@ -342,31 +373,30 @@ const ProductFormModal = ({ isOpen, onClose, onSave, editingProduct, typeProduct
                         onChange={handleImageChange}
                         accept="image/*"
                         className="hidden"
+                        disabled={isUploading}
                       />
                     </label>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleUploadImage}
-                    disabled={isUploading || !fileInputRef.current?.files?.[0]}
-                    className="px-6 py-3 bg-green-400 text-white font-semibold rounded-xl hover:bg-green-500 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-sm"
-                  >
-                    {isUploading ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Đang tải...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CloudArrowUpIcon className="w-5 h-5" />
-                        <span>Upload</span>
-                      </>
-                    )}
-                  </button>
                 </div>
                 <p className="mt-2 text-xs text-gray-500">
                   Định dạng: JPG, PNG, GIF. Kích thước tối đa: 5MB
                 </p>
+                
+                {/* Temporary preview during upload */}
+                {tempImagePreview && isUploading && (
+                  <div className="mt-4 flex justify-center">
+                    <div className="relative">
+                      <img
+                        src={tempImagePreview}
+                        alt="Uploading preview"
+                        className="w-32 h-32 object-cover rounded-xl border-4 border-gray-200 shadow-md opacity-50"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

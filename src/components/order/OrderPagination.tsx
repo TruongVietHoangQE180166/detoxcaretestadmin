@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-type ProfilePaginationProps = {
+type OrderPaginationProps = {
   currentPage: number;
   totalPages: number;
   totalItems: number;
@@ -8,7 +8,7 @@ type ProfilePaginationProps = {
   onPageChange: (page: number) => void;
 };
 
-const ProfilePagination = ({ currentPage, totalPages, totalItems, itemsPerPage, onPageChange }: ProfilePaginationProps) => {
+const OrderPagination = ({ currentPage, totalPages, totalItems, itemsPerPage, onPageChange }: OrderPaginationProps) => {
   // Don't show pagination if there's only one page
   if (totalPages <= 1) return null;
 
@@ -63,7 +63,7 @@ const ProfilePagination = ({ currentPage, totalPages, totalItems, itemsPerPage, 
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
       {/* Page info */}
       <div className="text-sm text-gray-600">
-        Hiển thị <span className="font-medium">{startItem}</span> đến <span className="font-medium">{endItem}</span> trong tổng số <span className="font-medium">{totalItems}</span> hồ sơ
+        Hiển thị <span className="font-medium">{startItem}</span> đến <span className="font-medium">{endItem}</span> trong tổng số <span className="font-medium">{totalItems}</span> đơn hàng
       </div>
 
       <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -105,7 +105,7 @@ const ProfilePagination = ({ currentPage, totalPages, totalItems, itemsPerPage, 
               onClick={() => onPageChange(page)}
               className={`px-4 py-2 rounded-xl transition-all ${
                 page === currentPage
-                  ? "bg-green-400 text-white font-medium shadow-md hover:bg-green-500"
+                  ? "bg-green-500 text-white font-medium shadow-md hover:bg-green-600"
                   : "bg-white text-gray-700 hover:bg-green-50 hover:text-green-600 border border-gray-200 shadow-sm"
               }`}
             >
@@ -131,4 +131,4 @@ const ProfilePagination = ({ currentPage, totalPages, totalItems, itemsPerPage, 
   );
 };
 
-export default ProfilePagination;
+export default OrderPagination;
