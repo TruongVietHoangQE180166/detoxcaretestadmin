@@ -1,183 +1,363 @@
-import { useEffect, useState } from "react";
-import type { Product, TypeProduct } from "../components/product/types";
-import type { Order, OrderDetail } from "../components/order/types";
+import { useEffect, useState, useMemo } from "react";
+import type { Order } from "../components/order/types";
 import OrderTable from "../components/order/OrderTable";
-import OrderDetailModal from "../components/order/OrderDetailModal";
-import type { Payment } from "../components/payment/types";
-import PaymentTable from "../components/payment/PaymentTable";
-import { CreditCard } from "lucide-react";
-import { getAllOrders } from "../services/orders";
+import OrderPagination from "../components/order/OrderPagination";
+import { ShoppingCart } from "lucide-react";
+import { getAllOrders, updateOrderStatus } from "../services/orders";
 import type { Query } from "../services/common/queryCommon";
-import { getAllPayment } from "../services/payment";
+import { useToast } from "../components/common/ToastContext";
 
+// Define the order item type based on the API response
+type OrderItem = {
+  priceProduct: string;
+  salePrice: string;
+  productName: string;
+  image: string;
+  typeProductName: string;
+  quantity: number;
+  price: number;
+};
 
-// // fake typeProduct
-// const fakeTypeProduct: TypeProduct = {
-//     id: "t1",
-//     name: "Detox",
-//     image: "https://via.placeholder.com/60x60.png?text=Detox",
-//     description: "Đồ uống Detox thanh lọc cơ thể",
-//     is_deleted: false,
-// };
-
-// // fake products
-// const fakeProducts: Product[] = [
-//     {
-//         id: "p1",
-//         name: "Nước Detox Chanh Leo",
-//         price: 30000,
-//         salePrice: 25000,
-//         sales: 100,
-//         rating: 4.5,
-//         image: "https://via.placeholder.com/80x80.png?text=Chanh+Leo",
-//         isActive: true,
-//         typeProduct: fakeTypeProduct,
-//     },
-//     {
-//         id: "p2",
-//         name: "Nước Detox Dứa",
-//         price: 35000,
-//         salePrice: 30000,
-//         sales: 120,
-//         rating: 4.8,
-//         image: "https://via.placeholder.com/80x80.png?text=Dứa",
-//         isActive: true,
-//         typeProduct: fakeTypeProduct,
-//     },
-// ];
-
-// // fake orders
-// const fakeOrders: Order[] = [
-//     {
-//         id: "o1",
-//         user_id: "u1",
-//         address: "123 Nguyễn Trãi, Hà Nội",
-//         number_phone: "0379560889",
-//         order_status: "COMPLETED",
-//         total_amount: 95000,
-//         created_date: "2025-09-13",
-//     },
-// ];
-
-// // fake order details
-// const fakeOrderDetails: OrderDetail[] = [
-//     {
-//         id: "d1",
-//         order_id: "o1",
-//         product: fakeProducts[0],
-//         price: 30000,
-//         quantity: 2,
-//     },
-//     {
-//         id: "d2",
-//         order_id: "o1",
-//         product: fakeProducts[1],
-//         price: 35000,
-//         quantity: 1,
-//     },
-// ];
-
-
-
-
+// Extend the Order type to include order items and other details
+type OrderWithItems = Order & {
+  orderCode?: string;
+  shippingFee?: number;
+  expectedDeliveryTime?: string;
+  orderItems: OrderItem[];
+  createdDate?: string;
+};
 
 const OrderManagement = () => {
-    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-    const [orderDetails, setOrderDetails] = useState<OrderDetail[]>([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState<"orders" | "payments">("orders");
+    const { addToast } = useToast();
+    const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
+    const [orders, setOrders] = useState<OrderWithItems[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [search, setSearch] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const ordersPerPage = 5;
 
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [dataPayment, setDataPayment] = useState<Payment[]>([]);
+    // Filter orders (no sorting in table, but search)
+    const filteredOrders = useMemo(() => {
+      if (!search) return orders;
+      const term = search.toLowerCase();
+      return orders.filter(
+        (order) =>
+          order?.id.toLowerCase().includes(term) ||
+          order?.address.toLowerCase().includes(term) ||
+          order?.numberPhone.toLowerCase().includes(term) ||
+          order?.email.toLowerCase().includes(term)
+      );
+    }, [orders, search]);
 
+    // Pagination for orders
+    const indexOfLastOrder = currentPage * ordersPerPage;
+    const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
+    const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
+    const orderTotalPages = Math.ceil(filteredOrders.length / ordersPerPage);
 
-  const [sortOption, setSortOption] = useState<"none" | "name" | "price" | "status">("none");
-
-  const query: Query = {
-    page: currentPage,
-    size: 5,
-    field: sortOption === "price" ? "price" : sortOption === "name" ? "name" : "createdDate",
-    direction: sortOption === "status" ? "desc" : "desc",
-  };
+    const query: Query = {
+      page: currentPage,
+      size: 1000,
+    };
 
     const fetchDataOrders = async () => {
         try {
+          setLoading(true);
           const data = await getAllOrders(query);
-          console.log("Fetched products:", data.data.content);
+          console.log("Fetched orders:", data.data.content);
           setOrders(data.data.content);
-          setTotalPages(data.totalPages);
         } catch (error) {
-          console.error("Lỗi fetch products:", error);
+          console.error("Lỗi fetch orders:", error);
+          addToast('Có lỗi xảy ra khi tải đơn hàng!', 'error');
+        } finally {
+          setLoading(false);
         }
       };
 
-    const fetchDataPayment = async () => {
-        try {
-          const data = await getAllPayment(query);
-          console.log("Fetched products:", data.data.content);
-            setDataPayment(data.data.content);
-          setTotalPages(data.totalPages);
-        } catch (error) {
-          console.error("Lỗi fetch products:", error);
-        }
-      };
-
-
-    const handleView = (order: Order) => {
-        // const details = fakeOrderDetails.filter((d) => d.order_id === order.id);
-        setSelectedOrder(order);
-        // setOrderDetails(details);
-        setIsModalOpen(true);
-    };
-
-
-
-    
-        // --- FETCH TYPE PRODUCTS ---
+    // Add useEffect to fetch orders when component mounts
       useEffect(() => {
         fetchDataOrders();
-        fetchDataPayment();
       }, []);
 
+      const handleView = (order: OrderWithItems) => {
+        setSelectedOrder(order);
+      };
+
+      const handleBack = () => {
+        setSelectedOrder(null);
+      };
+
+      const handleUpdateStatus = async (orderId: string, status: 'COMPLETED' | 'CANCELLED') => {
+        try {
+          await updateOrderStatus(orderId, status);
+          
+          // Show success message
+          addToast(
+            status === 'COMPLETED' 
+              ? 'Đơn hàng đã được chấp nhận!' 
+              : 'Đơn hàng đã bị từ chối!',
+            status === 'COMPLETED' ? 'success' : 'error'
+          );
+          
+          // Update the order status in the state instead of reloading the page
+          setOrders(prevOrders => 
+            prevOrders.map(order => 
+              order.id === orderId ? { ...order, status } : order
+            )
+          );
+          
+          // Also update the selected order if it's the one being updated
+          if (selectedOrder && selectedOrder.id === orderId) {
+            setSelectedOrder({ ...selectedOrder, status });
+          }
+        } catch (error) {
+          console.error("Lỗi khi cập nhật trạng thái đơn hàng:", error);
+          addToast('Có lỗi xảy ra khi cập nhật trạng thái đơn hàng!', 'error');
+        }
+      };
+
     return (
-        <div className="p-6">
-            <h1 className="text-3xl font-bold text-green-600 flex items-center gap-3 mb-4">
-                <CreditCard className="w-6 h-6" />
-                Quản lý Orders & Payments
-            </h1>
+        <div className="min-h-screen bg-gray-50 p-8">
+            <div className="max-w-7xl mx-auto space-y-6">
+                {/* Header */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                    <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                        <div className="p-2 bg-green-400 rounded-xl">
+                            <ShoppingCart className="w-7 h-7 text-white" />
+                        </div>
+                        Quản lý Orders
+                    </h1>
+                </div>
 
-            {/* Tabs */}
-            <div className="flex space-x-4 mb-4">
-                <button
-                    className={`px-4 py-2 rounded ${activeTab === "orders" ? "bg-green-600 text-white" : "bg-gray-200"}`}
-                    onClick={() => setActiveTab("orders")}
-                >
-                    Orders
-                </button>
-                <button
-                    className={`px-4 py-2 rounded ${activeTab === "payments" ? "bg-green-600 text-white" : "bg-gray-200"}`}
-                    onClick={() => setActiveTab("payments")}
-                >
-                    Payments
-                </button>
+                {!selectedOrder ? (
+                  <div className="space-y-6">
+                    {/* Search */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                        <div className="flex flex-col md:flex-row gap-4 items-center">
+                            <div className="relative flex-grow">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="Tìm kiếm theo User ID, Email, Địa chỉ hoặc SĐT..."
+                                    value={search}
+                                    onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+                                    className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Loading indicator for orders */}
+                    {loading && (
+                      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex justify-center items-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+                      </div>
+                    )}
+                    
+                    {/* Order Table */}
+                    {!loading && (
+                      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                          <OrderTable orders={currentOrders} onView={handleView} />
+                      </div>
+                    )}
+                    
+                    {/* Order Pagination */}
+                    {!loading && (
+                      <OrderPagination 
+                        currentPage={currentPage}
+                        totalPages={orderTotalPages}
+                        totalItems={filteredOrders.length}
+                        itemsPerPage={ordersPerPage}
+                        onPageChange={setCurrentPage}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  // Order Detail Section
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div className="p-6">
+                      <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-bold text-gray-900">
+                          Chi tiết đơn hàng #{selectedOrder.orderCode || selectedOrder.id.slice(0, 8)}
+                        </h2>
+                        <button
+                          onClick={handleBack}
+                          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                          </svg>
+                          Quay lại
+                        </button>
+                      </div>
+
+                      {/* Order Information - now stacked vertically */}
+                      <div className="space-y-6 mb-8">
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Thông tin đơn hàng</h3>
+                          <div className="space-y-3">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Mã đơn hàng:</span>
+                              <span className="font-medium">{selectedOrder.orderCode}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Ngày tạo:</span>
+                              <span className="font-medium">
+                                {selectedOrder.createdDate 
+                                  ? new Date(selectedOrder.createdDate).toLocaleString('vi-VN') 
+                                  : 'N/A'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Thời gian giao dự kiến:</span>
+                              <span className="font-medium">
+                                {selectedOrder.expectedDeliveryTime 
+                                  ? new Date(selectedOrder.expectedDeliveryTime).toLocaleString('vi-VN') 
+                                  : 'N/A'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Trạng thái:</span>
+                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                                selectedOrder.status === "COMPLETED"
+                                  ? "bg-green-100 text-green-800"
+                                  : selectedOrder.status === "PENDING"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : selectedOrder.status === "CANCELLED"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-gray-100 text-gray-800"
+                              }`}>
+                                {selectedOrder.status === "COMPLETED"
+                                  ? "Hoàn thành"
+                                  : selectedOrder.status === "PENDING"
+                                  ? "Đang xử lý"
+                                  : selectedOrder.status === "CANCELLED"
+                                  ? "Đã hủy"
+                                  : "Chưa xác định"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Customer Information - now below order information */}
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Thông tin khách hàng</h3>
+                          <div className="space-y-3">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Email:</span>
+                              <span className="font-medium">{selectedOrder.email}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Địa chỉ:</span>
+                              <span className="font-medium">{selectedOrder.address}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Số điện thoại:</span>
+                              <span className="font-medium">{selectedOrder.numberPhone}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mb-8">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">Danh sách sản phẩm</h3>
+                        <div className="space-y-4">
+                          {selectedOrder.orderItems.map((item, index) => {
+                            // Use salePrice if available and not zero, otherwise use regular price
+                            const displayPrice = (parseFloat(item.salePrice) > 0) 
+                              ? parseFloat(item.salePrice) 
+                              : parseFloat(item.priceProduct);
+                            
+                            return (
+                              <div key={index} className="flex items-center border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                                <img
+                                  src={item.image}
+                                  alt={item.productName}
+                                  className="w-20 h-20 object-cover rounded-lg"
+                                />
+                                <div className="ml-4 flex-1">
+                                  <h4 className="font-medium text-gray-900">{item.productName}</h4>
+                                  <p className="text-sm text-gray-500">{item.typeProductName}</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-medium text-gray-900">{displayPrice.toLocaleString('vi-VN')}₫</p>
+                                  <p className="text-sm text-gray-500">Số lượng: {item.quantity}</p>
+                                  <p className="text-sm font-medium text-green-600">
+                                    Thành tiền: {(displayPrice * item.quantity).toLocaleString('vi-VN')}₫
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="bg-gray-50 rounded-lg p-6 mb-8">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Tổng kết đơn hàng</h3>
+                        <div className="space-y-3">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Tạm tính:</span>
+                            <span>
+                              {selectedOrder.orderItems
+                                .reduce((sum, item) => {
+                                  // Use salePrice if available and not zero, otherwise use regular price
+                                  const itemPrice = (parseFloat(item.salePrice) > 0) 
+                                    ? parseFloat(item.salePrice) 
+                                    : parseFloat(item.priceProduct);
+                                  return sum + (itemPrice * item.quantity);
+                                }, 0)
+                                .toLocaleString('vi-VN')}₫
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Phí vận chuyển:</span>
+                            <span>
+                              {(selectedOrder.shippingFee || 0).toLocaleString('vi-VN')}₫
+                            </span>
+                          </div>
+                          <div className="flex justify-between border-t border-gray-300 pt-3">
+                            <span className="text-lg font-semibold text-gray-900">Tổng cộng:</span>
+                            <span className="text-lg font-bold text-green-600">
+                              {(
+                                selectedOrder.orderItems
+                                  .reduce((sum, item) => {
+                                    // Use salePrice if available and not zero, otherwise use regular price
+                                    const itemPrice = (parseFloat(item.salePrice) > 0) 
+                                      ? parseFloat(item.salePrice) 
+                                      : parseFloat(item.priceProduct);
+                                    return sum + (itemPrice * item.quantity);
+                                  }, 0) + (selectedOrder.shippingFee || 0)
+                              ).toLocaleString('vi-VN')}₫
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action buttons for pending orders - at the bottom */}
+                      {selectedOrder.status === "PENDING" && (
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => handleUpdateStatus(selectedOrder.id, 'COMPLETED')}
+                            className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 px-4 rounded-lg transition-colors font-medium"
+                          >
+                            Chấp nhận đơn hàng
+                          </button>
+                          <button
+                            onClick={() => handleUpdateStatus(selectedOrder.id, 'CANCELLED')}
+                            className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 px-4 rounded-lg transition-colors font-medium"
+                          >
+                            Từ chối đơn hàng
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
             </div>
-
-            {/* Content */}
-            {activeTab === "orders" ? (
-                <>
-                    <OrderTable orders={orders} onView={handleView} />
-                    {/* <OrderDetailModal
-                        isOpen={isModalOpen}
-                        order={selectedOrder}
-                        orderDetails={orderDetails}
-                        onClose={() => setIsModalOpen(false)}
-                    /> */}
-                </>
-            ) : (
-                <PaymentTable payments={dataPayment} />
-            )}
         </div>
     );
 };

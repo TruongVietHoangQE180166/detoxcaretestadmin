@@ -1,17 +1,36 @@
 import { useState, useMemo } from "react";
 import type { Order } from "./types";
+import { EyeIcon } from "@heroicons/react/24/outline";
+
+// Define the order item type based on the API response
+type OrderItem = {
+  priceProduct: string;
+  salePrice: string;
+  productName: string;
+  image: string;
+  typeProductName: string;
+  quantity: number;
+  price: number;
+};
+
+// Extend the Order type to include order items and other details
+type OrderWithItems = Order & {
+  orderCode?: string;
+  shippingFee?: number;
+  expectedDeliveryTime?: string;
+  orderItems: OrderItem[];
+  createdDate?: string;
+};
 
 type Props = {
-  orders: Order[];
-  onView: (order: Order) => void;
+  orders: OrderWithItems[];
+  onView: (order: OrderWithItems) => void;
 };
 
 const OrderTable = ({ orders, onView }: Props) => {
-  const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<"totalAmount" | "status" | "">("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  const ordersPerPage = 5;
 
   // Search and filter
   const filteredOrders = useMemo(() => {
@@ -19,7 +38,7 @@ const OrderTable = ({ orders, onView }: Props) => {
     const term = searchTerm.toLowerCase();
     return orders.filter(
       (order) =>
-        order?.userId.toLowerCase().includes(term) ||
+        order?.id.toLowerCase().includes(term) ||
         order?.address.toLowerCase().includes(term) ||
         order?.numberPhone.toLowerCase().includes(term) ||
         order?.email.toLowerCase().includes(term)
@@ -34,8 +53,25 @@ const OrderTable = ({ orders, onView }: Props) => {
       let bValue = b[sortField];
 
       if (sortField === "totalAmount") {
-        aValue = aValue || 0;
-        bValue = bValue || 0;
+        // Calculate total amount including shipping fee for sorting
+        const aSubtotal = a.orderItems.reduce((sum, item) => {
+          const itemPrice = (parseFloat(item.salePrice) > 0) 
+            ? parseFloat(item.salePrice) 
+            : parseFloat(item.priceProduct);
+          return sum + (itemPrice * item.quantity);
+        }, 0);
+        const aTotalWithShipping = aSubtotal + (a.shippingFee || 0);
+        
+        const bSubtotal = b.orderItems.reduce((sum, item) => {
+          const itemPrice = (parseFloat(item.salePrice) > 0) 
+            ? parseFloat(item.salePrice) 
+            : parseFloat(item.priceProduct);
+          return sum + (itemPrice * item.quantity);
+        }, 0);
+        const bTotalWithShipping = bSubtotal + (b.shippingFee || 0);
+        
+        aValue = aTotalWithShipping;
+        bValue = bTotalWithShipping;
       }
 
       return aValue < bValue
@@ -50,14 +86,6 @@ const OrderTable = ({ orders, onView }: Props) => {
     });
   }, [filteredOrders, sortField, sortDirection]);
 
-  // Pagination
-  const indexOfLastOrder = currentPage * ordersPerPage;
-  const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
-  const currentOrders = sortedOrders.slice(indexOfFirstOrder, indexOfLastOrder);
-  const totalPages = Math.ceil(sortedOrders.length / ordersPerPage);
-
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-
   // Handle sort
   const handleSort = (field: "totalAmount" | "status") => {
     if (sortField === field) {
@@ -69,143 +97,112 @@ const OrderTable = ({ orders, onView }: Props) => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Search Box */}
-      <div className="flex justify-end">
-        <div className="relative w-full max-w-xs">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 text-green-500"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-          </div>
-          <input
-            type="text"
-            placeholder="Tìm kiếm theo User ID, Email, Địa chỉ hoặc SĐT..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="pl-10 pr-4 py-2 w-full border border-green-200 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-green-400 text-sm text-gray-700 bg-white shadow-sm transition-all duration-200"
-          />
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="overflow-x-auto shadow-xl rounded-xl bg-white">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-green-600 text-white">
-              <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide">ID</th>
-              <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide">User ID</th>
-              <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide">Email</th>
-              <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide">Địa chỉ</th>
-              <th className="p-4 text-left text-sm font-semibold uppercase tracking-wide">SĐT</th>
-              <th
-                className="p-4 text-left text-sm font-semibold uppercase tracking-wide cursor-pointer hover:bg-green-700 transition-colors duration-150"
+    <div className="overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead className="bg-gray-900 text-white">
+            <tr>
+              <th className="p-4 font-semibold text-sm">ID</th>
+              <th className="p-4 font-semibold text-sm">Email</th>
+              <th className="p-4 font-semibold text-sm">Địa chỉ</th>
+              <th className="p-4 font-semibold text-sm">SĐT</th>
+              <th 
+                className="p-4 font-semibold text-sm cursor-pointer hover:bg-gray-800 transition-colors whitespace-nowrap"
                 onClick={() => handleSort("status")}
               >
                 Trạng thái {sortField === "status" && (sortDirection === "asc" ? "↑" : "↓")}
               </th>
-              <th
-                className="p-4 text-left text-sm font-semibold uppercase tracking-wide cursor-pointer hover:bg-green-700 transition-colors duration-150"
+              <th 
+                className="p-4 font-semibold text-sm cursor-pointer hover:bg-gray-800 transition-colors whitespace-nowrap"
                 onClick={() => handleSort("totalAmount")}
               >
                 Tổng tiền {sortField === "totalAmount" && (sortDirection === "asc" ? "↑" : "↓")}
               </th>
-              <th className="p-4 text-center text-sm font-semibold uppercase tracking-wide">Hành động</th>
+              <th className="p-4 font-semibold text-sm text-center whitespace-nowrap">Hành động</th>
             </tr>
           </thead>
-          <tbody>
-            {currentOrders.map((order, index) => (
-              <tr
-                key={order.id}
-                className={`${
-                  index % 2 === 0 ? "bg-green-50/50" : "bg-white"
-                } hover:bg-green-100/70 transition-all duration-200 ease-in-out transform hover:scale-[1.002]`}
-              >
-                <td className="p-4 text-sm text-gray-800 font-medium border-b border-green-100">{order?.id}</td>
-                <td className="p-4 text-sm text-gray-700 border-b border-green-100">{order?.userId}</td>
-                <td className="p-4 text-sm text-gray-700 border-b border-green-100">{order?.email}</td>
-                <td className="p-4 text-sm text-gray-700 border-b border-green-100">{order?.address}</td>
-                <td className="p-4 text-sm text-gray-700 border-b border-green-100">{order?.numberPhone}</td>
-                <td className="p-4 text-sm border-b border-green-100">
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      order?.status === "COMPLETED"
-                        ? "bg-green-200 text-green-900"
-                        : order?.status === "PENDING"
-                        ? "bg-yellow-200 text-yellow-900"
-                        : "bg-gray-200 text-gray-900"
-                    }`}
-                  >
-                    {order?.status ?? "Chưa xác định"}
+          <tbody className="divide-y divide-gray-200">
+            {sortedOrders.map((order, index) => (
+              <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                <td className="p-4 text-sm font-semibold text-gray-900 max-w-[100px] truncate" title={order.orderCode}>
+                  {order.orderCode || order.id.slice(0, 8)}
+                </td>
+                <td className="p-4 text-sm text-gray-600 max-w-[120px] truncate">
+                  {order?.email}
+                </td>
+                <td className="p-4 text-sm text-gray-600 max-w-[150px] truncate" title={order?.address}>
+                  {order?.address}
+                </td>
+                <td className="p-4 text-sm text-gray-600 max-w-[100px] truncate">
+                  {order?.numberPhone}
+                </td>
+                <td className="p-4 text-sm text-gray-600 align-middle">
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                    order?.status === "COMPLETED"
+                      ? "bg-green-100 text-green-800"
+                      : order?.status === "PENDING"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : order?.status === "CANCELLED"
+                      ? "bg-red-100 text-red-800"
+                      : "bg-gray-100 text-gray-800"
+                  }`}>
+                    {order?.status === "COMPLETED"
+                      ? "Hoàn thành"
+                      : order?.status === "PENDING"
+                      ? "Đang xử lý"
+                      : order?.status === "CANCELLED"
+                      ? "Đã hủy"
+                      : order?.status || "Chưa xác định"}
                   </span>
                 </td>
-                <td className="p-4 text-sm text-gray-700 border-b border-green-100">
-                  <span className="font-semibold text-green-700">
-                    {order?.totalAmount.toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                <td className="p-4 text-sm text-gray-600 align-middle">
+                  <span className="font-semibold whitespace-nowrap">
+                    {(() => {
+                      // Calculate total amount including shipping fee
+                      const subtotal = order.orderItems.reduce((sum, item) => {
+                        // Use salePrice if available and not zero, otherwise use regular price
+                        const itemPrice = (parseFloat(item.salePrice) > 0) 
+                          ? parseFloat(item.salePrice) 
+                          : parseFloat(item.priceProduct);
+                        return sum + (itemPrice * item.quantity);
+                      }, 0);
+                      
+                      const totalWithShipping = subtotal + (order.shippingFee || 0);
+                      return totalWithShipping.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
+                    })()}
                   </span>
                 </td>
-                <td className="p-4 text-center border-b border-green-100">
-                  <button
-                    onClick={() => onView(order)}
-                    className="px-4 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 text-sm font-medium"
-                  >
-                    Xem chi tiết
-                  </button>
+                <td className="p-4 text-sm text-gray-600 align-middle">
+                  <div className="flex justify-center">
+                    <button
+                      onClick={() => onView(order)}
+                      className="p-2 bg-green-400 text-white rounded-lg hover:bg-green-500 transition-all transform hover:scale-110 shadow-sm"
+                      title="Xem chi tiết"
+                    >
+                      <EyeIcon className="w-4 h-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
+
+            {sortedOrders.length === 0 && (
+              <tr>
+                <td colSpan={7} className="p-12 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <p className="text-gray-500 font-medium">Không có đơn hàng nào</p>
+                    <p className="text-gray-400 text-sm">Các đơn hàng sẽ xuất hiện ở đây</p>
+                  </div>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex justify-between items-center mt-4 px-4">
-        <div className="text-sm text-gray-600">
-          Showing {indexOfFirstOrder + 1} to {Math.min(indexOfLastOrder, sortedOrders.length)} of {sortedOrders.length} entries
-        </div>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => paginate(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-green-700 transition-colors duration-200 text-sm font-medium"
-          >
-            Previous
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
-            <button
-              key={number}
-              onClick={() => paginate(number)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                currentPage === number
-                  ? "bg-green-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-green-100"
-              } transition-colors duration-200`}
-            >
-              {number}
-            </button>
-          ))}
-          <button
-            onClick={() => paginate(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-green-700 transition-colors duration-200 text-sm font-medium"
-          >
-            Next
-          </button>
-        </div>
       </div>
     </div>
   );

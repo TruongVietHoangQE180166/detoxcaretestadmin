@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import ProductTable from "../components/product/ProductTable";
+import ProductDetail from "../components/product/ProductDetail";
 import type { Product, TypeProduct } from "../components/product/types";
 import Pagination from "../components/product/Pagination";
 import ProductFormModal from "../components/product/ProductFormModal";
@@ -18,11 +19,15 @@ import {
   updateTypeProduct,
   uploadProductImage
 } from "../services/product/productService";
+import { useToast } from "../components/common/ToastContext";
 
 const ProductManagement = () => {
   const [activeTab, setActiveTab] = useState<"products" | "types">("products");
   const [isSortOpen, setIsSortOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(false);
   const sortRef = useRef<HTMLDivElement>(null);
+  const { addToast } = useToast();
 
   // --- PRODUCTS ---
   const [allProducts, setAllProducts] = useState<Product[]>([]); // All products from API
@@ -56,6 +61,7 @@ const ProductManagement = () => {
 
   const fetchDataProducts = async () => {
       try {
+        setLoading(true);
         const data = await getAllProduct(fetchAllQuery);
         console.log("Fetched products raw data:", data);
         // Based on your sample data, we need to check the actual structure
@@ -84,6 +90,8 @@ const ProductManagement = () => {
         setTotalProductPages(total > 0 ? total : 1);
       } catch (error) {
         console.error("Lỗi fetch products:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -129,15 +137,13 @@ const ProductManagement = () => {
         console.log("Updating product with ID:", product.id);
         const result = await updateProduct(product.id, productData);
         console.log("Product update result:", result);
-        // Show success message for update
-        alert("Cập nhật sản phẩm thành công!");
+        // Success toast is handled in the ProductFormModal
       } else {
         // For new products
         console.log("Creating new product");
         const result = await createProduct(productData);
         console.log("Product create result:", result);
-        // Show success message for creation
-        alert("Thêm sản phẩm thành công!");
+        // Success toast is handled in the ProductFormModal
       }
       
       // Refresh the product list
@@ -145,8 +151,8 @@ const ProductManagement = () => {
       await fetchDataProducts();
     } catch (error) {
       console.error("Error saving product:", error);
-      // Show error message to user
-      alert("Có lỗi xảy ra khi lưu sản phẩm. Vui lòng thử lại.");
+      // Show error message to user (only for parent-level errors)
+      addToast("Có lỗi xảy ra khi lưu sản phẩm. Vui lòng thử lại.", "error");
     }
   };
 
@@ -160,14 +166,14 @@ const ProductManagement = () => {
         await deleteProduct(p.id);
         
         // Show success message
-        alert("Xóa sản phẩm thành công!");
+        addToast("Xóa sản phẩm thành công!", "success");
         
         // Refresh the product list
         await fetchDataProducts();
       } catch (error) {
         console.error("Error deleting product:", error);
         // Show error message to user
-        alert("Có lỗi xảy ra khi xóa sản phẩm. Vui lòng thử lại.");
+        addToast("Có lỗi xảy ra khi xóa sản phẩm. Vui lòng thử lại.", "error");
       }
     }
   };
@@ -190,8 +196,7 @@ const ProductManagement = () => {
         console.log("Updating type product with data:", typeProductData);
         const result = await updateTypeProduct(typeProductData);
         console.log("Type product update result:", result);
-        // Show success message for update
-        alert("Cập nhật loại sản phẩm thành công!");
+        // Success toast is handled in the TypeProductFormModal
       } else {
         // For new type products (POST request)
         const typeProductData = {
@@ -203,16 +208,15 @@ const ProductManagement = () => {
         console.log("Creating new type product with data:", typeProductData);
         const result = await createTypeProduct(typeProductData);
         console.log("Type product create result:", result);
-        // Show success message for creation
-        alert("Thêm loại sản phẩm thành công!");
+        // Success toast is handled in the TypeProductFormModal
       }
       
       // Refresh the type product list
       await fetchTypeProducts();
     } catch (error) {
       console.error("Error saving type product:", error);
-      // Show error message to user
-      alert("Có lỗi xảy ra khi lưu loại sản phẩm. Vui lòng thử lại.");
+      // Show error message to user (only for parent-level errors)
+      addToast("Có lỗi xảy ra khi lưu loại sản phẩm. Vui lòng thử lại.", "error");
     }
   };
 
@@ -235,16 +239,24 @@ const ProductManagement = () => {
         console.log("Type product delete result:", result);
         
         // Show success message
-        alert("Xóa loại sản phẩm thành công!");
+        addToast("Xóa loại sản phẩm thành công!", "success");
         
         // Refresh the type product list
         await fetchTypeProducts();
       } catch (error) {
         console.error("Error deleting type product:", error);
         // Show error message to user
-        alert("Có lỗi xảy ra khi xóa loại sản phẩm. Vui lòng thử lại.");
+        addToast("Có lỗi xảy ra khi xóa loại sản phẩm. Vui lòng thử lại.", "error");
       }
     }
+  };
+
+  const handleViewProductDetails = (product: Product) => {
+    setSelectedProduct(product);
+  };
+
+  const handleBackFromProductDetail = () => {
+    setSelectedProduct(null);
   };
 
 
@@ -409,21 +421,40 @@ const ProductManagement = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <ProductTable
-                products={products}
-                onEdit={(p) => { setEditingProduct(p); setIsModalOpen(true); }}
-                onDelete={handleDeleteProduct}
+            {/* Product Detail View or Product Table */}
+            {selectedProduct ? (
+              <ProductDetail 
+                product={selectedProduct} 
+                onBack={handleBackFromProductDetail} 
               />
-            </div>
-            
-            <Pagination 
-              currentPage={currentProductPage} 
-              totalPages={totalProductPages} 
-              totalItems={allProducts.length}
-              itemsPerPage={productsPerPage}
-              onPageChange={setCurrentProductPage} 
-            />
+            ) : (
+              <>
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                  {loading ? (
+                    <div className="flex justify-center items-center h-64">
+                      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
+                    </div>
+                  ) : (
+                    <ProductTable
+                      products={products}
+                      onEdit={(p) => { setEditingProduct(p); setIsModalOpen(true); }}
+                      onDelete={handleDeleteProduct}
+                      onViewDetails={handleViewProductDetails}
+                    />
+                  )}
+                </div>
+                
+                {!loading && (
+                  <Pagination 
+                    currentPage={currentProductPage} 
+                    totalPages={totalProductPages} 
+                    totalItems={allProducts.length}
+                    itemsPerPage={productsPerPage}
+                    onPageChange={setCurrentProductPage} 
+                  />
+                )}
+              </>
+            )}
 
             <ProductFormModal
               isOpen={isModalOpen}

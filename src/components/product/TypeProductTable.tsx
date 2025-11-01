@@ -13,7 +13,6 @@ const TypeProductTable = ({ typeProducts, onEdit }: Props) => {
         <table className="w-full text-left">
           <thead className="bg-gray-900 text-white">
             <tr>
-              <th className="p-4 font-semibold text-sm">#</th>
               <th className="p-4 font-semibold text-sm">Tên loại</th>
               <th className="p-4 font-semibold text-sm">Mô tả</th>
               <th className="p-4 font-semibold text-sm">Trạng thái</th>
@@ -23,7 +22,6 @@ const TypeProductTable = ({ typeProducts, onEdit }: Props) => {
           <tbody className="divide-y divide-gray-200">
             {typeProducts.map((item, index) => (
               <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                <td className="p-4 text-sm text-gray-600 font-medium">{index + 1}</td>
                 <td className="p-4 text-sm font-semibold text-gray-900 max-w-xs truncate">
                   {item.name}
                 </td>
@@ -61,7 +59,7 @@ const TypeProductTable = ({ typeProducts, onEdit }: Props) => {
 
             {typeProducts.length === 0 && (
               <tr>
-                <td colSpan={5} className="p-12 text-center">
+                <td colSpan={4} className="p-12 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
                       <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

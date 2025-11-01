@@ -7,13 +7,29 @@ export interface User {
     deleted: number;
 }
 
+export interface Address {
+    id: string;
+    address: string;
+    default: boolean;
+    wardName?: string;
+    districtName?: string;
+    provinceName?: string;
+    type?: string;
+    note?: string;
+}
+
 export interface Profile {
     id: string;
-    avatar: string;
-    fullName: string;
-    gender: string;
-    dateOfBirth: string;
+    createdDate: string;
+    updatedDate: string;
     nickName: string;
-    phoneNumber: string;
+    fullName: string;
+    phoneNumber: string | null;
+    dateOfBirth: string | null;
+    avatar: string;
+    gender: string;
+    addresses?: Address[];
+    information: string | null;
     userId: string;
+    username: string;
 }

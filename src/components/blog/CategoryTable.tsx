@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { PencilSquareIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { PencilSquareIcon } from "@heroicons/react/24/outline";
 import CategoryPagination from "./CategoryPagination";
 
 // Define the Category API response structure
@@ -261,7 +261,6 @@ const CategoryTable: React.FC<CategoryTableProps> = ({ categories, onUpdate }) =
           <table className="w-full text-left">
             <thead className="bg-gray-900 text-white">
               <tr>
-                <th className="p-4 font-semibold text-sm">#</th>
                 <th 
                   className="p-4 font-semibold text-sm cursor-pointer hover:bg-gray-800"
                   onClick={() => handleSort("name")}
@@ -281,7 +280,6 @@ const CategoryTable: React.FC<CategoryTableProps> = ({ categories, onUpdate }) =
             <tbody className="divide-y divide-gray-200">
               {currentCategories.map((cat, index) => (
                 <tr key={cat.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="p-4 text-sm text-gray-600 font-medium">{indexOfFirstCategory + index + 1}</td>
                   <td className="p-4 text-sm font-semibold text-gray-900 max-w-xs truncate">
                     {cat.name}
                   </td>
@@ -319,7 +317,7 @@ const CategoryTable: React.FC<CategoryTableProps> = ({ categories, onUpdate }) =
 
               {currentCategories.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-12 text-center">
+                  <td colSpan={4} className="p-12 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
                         <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

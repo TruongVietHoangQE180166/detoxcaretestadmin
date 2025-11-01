@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import type { TypeProduct } from "./types";
 import { uploadProductImage } from "../../services/product/productService";
 import { XMarkIcon, CloudArrowUpIcon, PhotoIcon } from "@heroicons/react/24/outline";
+import { useToast } from "../common/ToastContext";
 
 type Props = {
   isOpen: boolean;
@@ -21,6 +22,8 @@ const TypeProductFormModal = ({ isOpen, onClose, onSave, editingTypeProduct }: P
   const [imagePreview, setImagePreview] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { addToast } = useToast();
+  const isEditing = !!editingTypeProduct;
 
   useEffect(() => {
     if (editingTypeProduct) {
@@ -67,21 +70,34 @@ const TypeProductFormModal = ({ isOpen, onClose, onSave, editingTypeProduct }: P
         const imageUrl = await uploadProductImage(file);
         setForm({ ...form, image: imageUrl });
         setImagePreview(imageUrl);
+        addToast("Upload ảnh thành công!", "success");
       } catch (error) {
         console.error("Error uploading image:", error);
-        alert("Có lỗi xảy ra khi tải ảnh lên. Vui lòng thử lại.");
+        addToast("Có lỗi xảy ra khi tải ảnh lên. Vui lòng thử lại.", "error");
       } finally {
         setIsUploading(false);
       }
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Ensure deleted is always false
     const formData = { ...form, deleted: false };
-    onSave(formData);
-    onClose();
+    
+    try {
+      onSave(formData);
+      addToast(
+        isEditing 
+          ? "Cập nhật loại sản phẩm thành công!" 
+          : "Thêm loại sản phẩm thành công!", 
+        "success"
+      );
+      onClose();
+    } catch (error) {
+      console.error("Error saving type product:", error);
+      addToast("Có lỗi xảy ra khi lưu loại sản phẩm. Vui lòng thử lại.", "error");
+    }
   };
 
   if (!isOpen) return null;
