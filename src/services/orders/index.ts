@@ -12,3 +12,8 @@ export const updateOrderStatus = async (orderId: string, status: 'COMPLETED' | '
     const res = await api.put(`/api/orders/${orderId}/status`, null, { params: { status } });
     return res.data;
 };
+
+export const getGHNOrderDetail = async (orderCode: string) => {
+    const res = await api.post("/api/ghn/order-detail", null, { params: { order_code: orderCode } });
+    return res.data;
+};
