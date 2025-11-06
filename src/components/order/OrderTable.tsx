@@ -39,6 +39,7 @@ const OrderTable = ({ orders, onView }: Props) => {
     return orders.filter(
       (order) =>
         order?.id.toLowerCase().includes(term) ||
+        (order?.orderCode && order.orderCode.toLowerCase().includes(term)) ||
         order?.address.toLowerCase().includes(term) ||
         order?.numberPhone.toLowerCase().includes(term) ||
         order?.email.toLowerCase().includes(term)
@@ -102,7 +103,8 @@ const OrderTable = ({ orders, onView }: Props) => {
         <table className="w-full text-left">
           <thead className="bg-gray-900 text-white">
             <tr>
-              <th className="p-4 font-semibold text-sm">ID</th>
+              <th className="p-4 font-semibold text-sm">Mã đơn hàng</th>
+              <th className="p-4 font-semibold text-sm">Mã vận đơn</th>
               <th className="p-4 font-semibold text-sm">Email</th>
               <th className="p-4 font-semibold text-sm">Địa chỉ</th>
               <th className="p-4 font-semibold text-sm">SĐT</th>
@@ -124,8 +126,11 @@ const OrderTable = ({ orders, onView }: Props) => {
           <tbody className="divide-y divide-gray-200">
             {sortedOrders.map((order, index) => (
               <tr key={order.id} className="hover:bg-gray-50 transition-colors">
-                <td className="p-4 text-sm font-semibold text-gray-900 max-w-[100px] truncate" title={order.orderCode}>
-                  {order.orderCode || order.id.slice(0, 8)}
+                <td className="p-4 text-sm font-semibold text-gray-900 max-w-[100px] truncate" title={order.id}>
+                  {order.id.slice(0, 8)}
+                </td>
+                <td className="p-4 text-sm text-gray-600 max-w-[100px] truncate" title={order.orderCode}>
+                  {order.orderCode || "Chưa có"}
                 </td>
                 <td className="p-4 text-sm text-gray-600 max-w-[120px] truncate">
                   {order?.email}
@@ -188,7 +193,7 @@ const OrderTable = ({ orders, onView }: Props) => {
 
             {sortedOrders.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-12 text-center">
+                <td colSpan={8} className="p-12 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
                       <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

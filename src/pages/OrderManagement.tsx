@@ -3,7 +3,7 @@ import type { Order } from "../components/order/types";
 import OrderTable from "../components/order/OrderTable";
 import OrderPagination from "../components/order/OrderPagination";
 import { ShoppingCart } from "lucide-react";
-import { getAllOrders, updateOrderStatus } from "../services/orders";
+import { getAllOrders, updateOrderStatus, getGHNOrderDetail } from "../services/orders";
 import type { Query } from "../services/common/queryCommon";
 import { useToast } from "../components/common/ToastContext";
 
@@ -27,6 +27,16 @@ type OrderWithItems = Order & {
   createdDate?: string;
 };
 
+// Define GHN order detail type
+type GHNOrderDetail = {
+  status: string;
+  order_date: string;
+  log: {
+    status: string;
+    updated_date: string;
+  }[] | null;
+};
+
 const OrderManagement = () => {
     const { addToast } = useToast();
     const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
@@ -34,6 +44,8 @@ const OrderManagement = () => {
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
+    const [ghnOrderDetail, setGhnOrderDetail] = useState<GHNOrderDetail | null>(null);
+    const [ghnLoading, setGhnLoading] = useState(false);
     const ordersPerPage = 5;
 
     // Filter orders (no sorting in table, but search)
@@ -43,6 +55,7 @@ const OrderManagement = () => {
       return orders.filter(
         (order) =>
           order?.id.toLowerCase().includes(term) ||
+          (order?.orderCode && order.orderCode.toLowerCase().includes(term)) ||
           order?.address.toLowerCase().includes(term) ||
           order?.numberPhone.toLowerCase().includes(term) ||
           order?.email.toLowerCase().includes(term)
@@ -79,12 +92,28 @@ const OrderManagement = () => {
         fetchDataOrders();
       }, []);
 
-      const handleView = (order: OrderWithItems) => {
+      const handleView = async (order: OrderWithItems) => {
         setSelectedOrder(order);
+        
+        // Fetch GHN order detail if order has orderCode
+        if (order.orderCode) {
+          try {
+            setGhnLoading(true);
+            const ghnData = await getGHNOrderDetail(order.orderCode);
+            setGhnOrderDetail(ghnData.data);
+          } catch (error) {
+            console.error("Lỗi fetch GHN order detail:", error);
+            addToast('Có lỗi xảy ra khi tải thông tin vận chuyển!', 'error');
+            setGhnOrderDetail(null);
+          } finally {
+            setGhnLoading(false);
+          }
+        }
       };
 
       const handleBack = () => {
         setSelectedOrder(null);
+        setGhnOrderDetail(null);
       };
 
       const handleUpdateStatus = async (orderId: string, status: 'COMPLETED' | 'CANCELLED') => {
@@ -142,7 +171,7 @@ const OrderManagement = () => {
                                 </div>
                                 <input
                                     type="text"
-                                    placeholder="Tìm kiếm theo User ID, Email, Địa chỉ hoặc SĐT..."
+                                    placeholder="Tìm kiếm theo Mã đơn hàng, Mã vận đơn, Email, Địa chỉ hoặc SĐT..."
                                     value={search}
                                     onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
                                     className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
@@ -182,7 +211,7 @@ const OrderManagement = () => {
                     <div className="p-6">
                       <div className="flex justify-between items-center mb-6">
                         <h2 className="text-2xl font-bold text-gray-900">
-                          Chi tiết đơn hàng #{selectedOrder.orderCode || selectedOrder.id.slice(0, 8)}
+                          Chi tiết đơn hàng #{selectedOrder.id.slice(0, 8)}
                         </h2>
                         <button
                           onClick={handleBack}
@@ -202,7 +231,11 @@ const OrderManagement = () => {
                           <div className="space-y-3">
                             <div className="flex justify-between">
                               <span className="text-gray-600">Mã đơn hàng:</span>
-                              <span className="font-medium">{selectedOrder.orderCode}</span>
+                              <span className="font-medium">{selectedOrder.id}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Mã vận đơn:</span>
+                              <span className="font-medium">{selectedOrder.orderCode || "Chưa có"}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-600">Ngày tạo:</span>
@@ -262,6 +295,47 @@ const OrderManagement = () => {
                           </div>
                         </div>
                       </div>
+
+                      {/* Shipping Process Tracking - Only show if order has orderCode */}
+                      {selectedOrder.orderCode && (
+                        <div className="mb-8">
+                          <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">Quá trình vận chuyển</h3>
+                          {ghnLoading ? (
+                            <div className="flex justify-center py-6">
+                              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+                            </div>
+                          ) : ghnOrderDetail ? (
+                            ghnOrderDetail.log && ghnOrderDetail.log.length > 0 ? (
+                              <div className="space-y-4">
+                                {ghnOrderDetail.log.map((logItem, index) => (
+                                  <div key={index} className="flex">
+                                    <div className="flex flex-col items-center mr-4">
+                                      <div className={`w-3 h-3 rounded-full ${
+                                        index === ghnOrderDetail.log.length - 1 && ghnOrderDetail.status === logItem.status
+                                          ? "bg-green-500"
+                                          : "bg-green-300"
+                                      }`}></div>
+                                      {index !== ghnOrderDetail.log.length - 1 && (
+                                        <div className="w-0.5 h-full bg-green-300"></div>
+                                      )}
+                                    </div>
+                                    <div className={`pb-4 ${index === ghnOrderDetail.log.length - 1 ? "" : "mb-2"}`}>
+                                      <p className="font-medium text-gray-900">{logItem.status}</p>
+                                      <p className="text-sm text-gray-500">
+                                        {new Date(logItem.updated_date).toLocaleString('vi-VN')}
+                                      </p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-gray-500 italic">Chưa có thông tin quá trình giao hàng</p>
+                            )
+                          ) : (
+                            <p className="text-gray-500 italic">Chưa có thông tin quá trình giao hàng</p>
+                          )}
+                        </div>
+                      )}
 
                       <div className="mb-8">
                         <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">Danh sách sản phẩm</h3>
