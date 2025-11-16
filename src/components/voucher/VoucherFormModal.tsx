@@ -57,12 +57,22 @@ const VoucherFormModal = ({ voucher, onSave, onClose }: Props) => {
     setError(null);
   }, [voucher]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : type === "number" ? Number(value) : value,
-    }));
+  // Function to handle numeric input changes and remove leading zeros
+  const handleNumericChange = (e: React.ChangeEvent<HTMLInputElement>, field: keyof IVoucher) => {
+    let value = e.target.value;
+    
+    // Remove any non-digit characters except for the first character check
+    value = value.replace(/\D/g, '');
+    
+    // Remove leading zeros but allow a single zero
+    if (value.length > 1) {
+      value = value.replace(/^0+/, '');
+    }
+    
+    // Convert to number
+    const numericValue = value ? Number(value) : 0;
+    
+    setForm(prev => ({ ...prev, [field]: numericValue }));
   };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -193,7 +203,7 @@ const VoucherFormModal = ({ voucher, onSave, onClose }: Props) => {
               <input
                 name="code"
                 value={form.code}
-                onChange={handleChange}
+                onChange={(e) => setForm(prev => ({ ...prev, code: e.target.value }))}
                 placeholder="Nhập mã voucher"
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all"
                 required
@@ -253,9 +263,9 @@ const VoucherFormModal = ({ voucher, onSave, onClose }: Props) => {
               </label>
               <input
                 name="discountValue"
-                type="number"
+                type="text"
                 value={form.discountValue}
-                onChange={handleChange}
+                onChange={(e) => handleNumericChange(e, 'discountValue')}
                 placeholder={form.percentage ? "Nhập phần trăm (1-99)" : "Nhập số tiền"}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all"
                 min={form.percentage ? "1" : "1"}
@@ -280,9 +290,9 @@ const VoucherFormModal = ({ voucher, onSave, onClose }: Props) => {
                 </label>
                 <input
                   name="minOrderValue"
-                  type="number"
+                  type="text"
                   value={form.minOrderValue}
-                  onChange={handleChange}
+                  onChange={(e) => handleNumericChange(e, 'minOrderValue')}
                   placeholder="Đơn tối thiểu"
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all"
                 />
@@ -294,9 +304,9 @@ const VoucherFormModal = ({ voucher, onSave, onClose }: Props) => {
                 </label>
                 <input
                   name="exchangePoint"
-                  type="number"
+                  type="text"
                   value={form.exchangePoint}
-                  onChange={handleChange}
+                  onChange={(e) => handleNumericChange(e, 'exchangePoint')}
                   placeholder="Điểm đổi"
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all"
                 />
@@ -309,7 +319,7 @@ const VoucherFormModal = ({ voucher, onSave, onClose }: Props) => {
                 type="checkbox"
                 name="active"
                 checked={form.active}
-                onChange={handleChange}
+                onChange={(e) => setForm(prev => ({ ...prev, active: e.target.checked }))}
                 className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
               />
               <label className="ml-2 text-sm text-gray-700">

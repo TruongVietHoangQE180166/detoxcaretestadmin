@@ -373,41 +373,47 @@ const OrderManagement = () => {
                       <div className="bg-gray-50 rounded-lg p-6 mb-8">
                         <h3 className="text-lg font-semibold text-gray-800 mb-4">Tổng kết đơn hàng</h3>
                         <div className="space-y-3">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Tạm tính:</span>
-                            <span>
-                              {selectedOrder.orderItems
-                                .reduce((sum, item) => {
-                                  // Use salePrice if available and not zero, otherwise use regular price
-                                  const itemPrice = (parseFloat(item.salePrice) > 0) 
-                                    ? parseFloat(item.salePrice) 
-                                    : parseFloat(item.priceProduct);
-                                  return sum + (itemPrice * item.quantity);
-                                }, 0)
-                                .toLocaleString('vi-VN')}₫
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Phí vận chuyển:</span>
-                            <span>
-                              {(selectedOrder.shippingFee || 0).toLocaleString('vi-VN')}₫
-                            </span>
-                          </div>
-                          <div className="flex justify-between border-t border-gray-300 pt-3">
-                            <span className="text-lg font-semibold text-gray-900">Tổng cộng:</span>
-                            <span className="text-lg font-bold text-green-600">
-                              {(
-                                selectedOrder.orderItems
-                                  .reduce((sum, item) => {
-                                    // Use salePrice if available and not zero, otherwise use regular price
-                                    const itemPrice = (parseFloat(item.salePrice) > 0) 
-                                      ? parseFloat(item.salePrice) 
-                                      : parseFloat(item.priceProduct);
-                                    return sum + (itemPrice * item.quantity);
-                                  }, 0) + (selectedOrder.shippingFee || 0)
-                              ).toLocaleString('vi-VN')}₫
-                            </span>
-                          </div>
+                          {/* Calculate sum of all product sale prices */}
+                          {(() => {
+                            const totalSalePrice = selectedOrder.orderItems.reduce((sum, item) => {
+                              const salePrice = parseFloat(item.salePrice) > 0 ? parseFloat(item.salePrice) : parseFloat(item.priceProduct);
+                              return sum + (salePrice * item.quantity);
+                            }, 0);
+                            
+                            const voucherDiscount = totalSalePrice - selectedOrder.totalAmount;
+                            
+                            return (
+                              <>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Tạm tính:</span>
+                                  <span>
+                                    {selectedOrder.totalAmount.toLocaleString('vi-VN')}₫
+                                  </span>
+                                </div>
+                                
+                                {/* Show voucher discount if greater than 0 */}
+                                {voucherDiscount > 0 && (
+                                  <div className="flex justify-between text-red-600">
+                                    <span className="text-gray-600">Voucher giảm giá:</span>
+                                    <span>-{voucherDiscount.toLocaleString('vi-VN')}₫</span>
+                                  </div>
+                                )}
+                                
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Phí vận chuyển:</span>
+                                  <span>
+                                    {(selectedOrder.shippingFee || 0).toLocaleString('vi-VN')}₫
+                                  </span>
+                                </div>
+                                <div className="flex justify-between border-t border-gray-300 pt-3">
+                                  <span className="text-lg font-semibold text-gray-900">Tổng cộng:</span>
+                                  <span className="text-lg font-bold text-green-600">
+                                    {(selectedOrder.totalAmount + (selectedOrder.shippingFee || 0)).toLocaleString('vi-VN')}₫
+                                  </span>
+                                </div>
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
 

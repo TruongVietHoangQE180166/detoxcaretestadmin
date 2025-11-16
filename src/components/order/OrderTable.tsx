@@ -54,25 +54,9 @@ const OrderTable = ({ orders, onView }: Props) => {
       let bValue = b[sortField];
 
       if (sortField === "totalAmount") {
-        // Calculate total amount including shipping fee for sorting
-        const aSubtotal = a.orderItems.reduce((sum, item) => {
-          const itemPrice = (parseFloat(item.salePrice) > 0) 
-            ? parseFloat(item.salePrice) 
-            : parseFloat(item.priceProduct);
-          return sum + (itemPrice * item.quantity);
-        }, 0);
-        const aTotalWithShipping = aSubtotal + (a.shippingFee || 0);
-        
-        const bSubtotal = b.orderItems.reduce((sum, item) => {
-          const itemPrice = (parseFloat(item.salePrice) > 0) 
-            ? parseFloat(item.salePrice) 
-            : parseFloat(item.priceProduct);
-          return sum + (itemPrice * item.quantity);
-        }, 0);
-        const bTotalWithShipping = bSubtotal + (b.shippingFee || 0);
-        
-        aValue = aTotalWithShipping;
-        bValue = bTotalWithShipping;
+        // Use the total of totalAmount + shippingFee for sorting
+        aValue = a.totalAmount + (a.shippingFee || 0);
+        bValue = b.totalAmount + (b.shippingFee || 0);
       }
 
       return aValue < bValue
@@ -118,7 +102,7 @@ const OrderTable = ({ orders, onView }: Props) => {
                 className="p-4 font-semibold text-sm cursor-pointer hover:bg-gray-800 transition-colors whitespace-nowrap"
                 onClick={() => handleSort("totalAmount")}
               >
-                Tổng tiền {sortField === "totalAmount" && (sortDirection === "asc" ? "↑" : "↓")}
+                Tổng cộng {sortField === "totalAmount" && (sortDirection === "asc" ? "↑" : "↓")}
               </th>
               <th className="p-4 font-semibold text-sm text-center whitespace-nowrap">Hành động</th>
             </tr>
@@ -162,19 +146,7 @@ const OrderTable = ({ orders, onView }: Props) => {
                 </td>
                 <td className="p-4 text-sm text-gray-600 align-middle">
                   <span className="font-semibold whitespace-nowrap">
-                    {(() => {
-                      // Calculate total amount including shipping fee
-                      const subtotal = order.orderItems.reduce((sum, item) => {
-                        // Use salePrice if available and not zero, otherwise use regular price
-                        const itemPrice = (parseFloat(item.salePrice) > 0) 
-                          ? parseFloat(item.salePrice) 
-                          : parseFloat(item.priceProduct);
-                        return sum + (itemPrice * item.quantity);
-                      }, 0);
-                      
-                      const totalWithShipping = subtotal + (order.shippingFee || 0);
-                      return totalWithShipping.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
-                    })()}
+                    {(order.totalAmount + (order.shippingFee || 0)).toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
                   </span>
                 </td>
                 <td className="p-4 text-sm text-gray-600 align-middle">
