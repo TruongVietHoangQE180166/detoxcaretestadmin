@@ -113,8 +113,32 @@ const ProductFormModal = ({ isOpen, onClose, onSave, editingProduct, typeProduct
     }
   };
 
-  const validateForm = (isEditing: boolean) => {
-    // Common validations for both editing and creating
+  // Function to handle price input changes and remove leading zeros
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'price' | 'salePrice') => {
+    let value = e.target.value;
+    
+    // Remove any non-digit characters except for the first character check
+    value = value.replace(/\D/g, '');
+    
+    // Remove leading zeros but allow a single zero
+    if (value.length > 1) {
+      value = value.replace(/^0+/, '');
+    }
+    
+    // Convert to number
+    const numericValue = value ? Number(value) : 0;
+    
+    setForm({ ...form, [field]: numericValue });
+  };
+
+  const validateForm = () => {
+    // Validate all fields are required
+    if (!form.name.trim()) {
+      return "Vui lòng nhập tên sản phẩm.";
+    }
+    if (!form.typeProduct?.id) {
+      return "Vui lòng chọn loại sản phẩm.";
+    }
     if (form.price <= 0) {
       return "Vui lòng nhập giá gốc hợp lệ.";
     }
@@ -124,32 +148,19 @@ const ProductFormModal = ({ isOpen, onClose, onSave, editingProduct, typeProduct
     if (form.salePrice >= form.price) {
       return "Giá khuyến mãi phải thấp hơn giá gốc.";
     }
-    
-    if (isEditing) {
-      // For editing, we just need to ensure we have an ID
-      if (!form.id) {
-        return "Không tìm thấy ID sản phẩm.";
-      }
-      return null;
-    } else {
-      // For creating new product, all fields are required
-      if (!form.name.trim()) {
-        return "Vui lòng nhập tên sản phẩm.";
-      }
-      if (!form.typeProduct?.id) {
-        return "Vui lòng chọn loại sản phẩm.";
-      }
-      if (!form.image) {
-        return "Vui lòng chọn ảnh sản phẩm.";
-      }
-      return null;
+    if (!form.image) {
+      return "Vui lòng chọn ảnh sản phẩm.";
     }
+    if (!form.description?.trim()) {
+      return "Vui lòng nhập mô tả sản phẩm.";
+    }
+    
+    return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const isEditing = !!editingProduct;
-    const validationError = validateForm(isEditing);
+    const validationError = validateForm();
     
     if (validationError) {
       setError(validationError);
@@ -162,7 +173,7 @@ const ProductFormModal = ({ isOpen, onClose, onSave, editingProduct, typeProduct
     try {
       onSave(form);
       addToast(
-        isEditing 
+        editingProduct 
           ? "Cập nhật sản phẩm thành công!" 
           : "Thêm sản phẩm thành công!", 
         "success"
@@ -264,7 +275,7 @@ const ProductFormModal = ({ isOpen, onClose, onSave, editingProduct, typeProduct
               {/* Mô tả */}
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Mô tả
+                  Mô tả <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={form.description || ""}
@@ -272,6 +283,7 @@ const ProductFormModal = ({ isOpen, onClose, onSave, editingProduct, typeProduct
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all resize-none"
                   placeholder="Nhập mô tả sản phẩm"
                   rows={3}
+                  required
                 />
               </div>
             </div>
@@ -284,9 +296,9 @@ const ProductFormModal = ({ isOpen, onClose, onSave, editingProduct, typeProduct
                   Giá gốc (VNĐ) <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="number"
+                  type="text"
                   value={form.price}
-                  onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
+                  onChange={(e) => handlePriceChange(e, 'price')}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all"
                   placeholder="Nhập giá gốc"
                   required
@@ -299,9 +311,9 @@ const ProductFormModal = ({ isOpen, onClose, onSave, editingProduct, typeProduct
                   Giá khuyến mãi (VNĐ)
                 </label>
                 <input
-                  type="number"
+                  type="text"
                   value={form.salePrice}
-                  onChange={(e) => setForm({ ...form, salePrice: Number(e.target.value) })}
+                  onChange={(e) => handlePriceChange(e, 'salePrice')}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all"
                   placeholder="Nhập giá khuyến mãi"
                 />
@@ -328,7 +340,7 @@ const ProductFormModal = ({ isOpen, onClose, onSave, editingProduct, typeProduct
               {/* Ảnh sản phẩm */}
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Ảnh sản phẩm
+                  Ảnh sản phẩm <span className="text-red-500">*</span>
                 </label>
                 
                 {/* Image Preview - Only show after successful upload */}

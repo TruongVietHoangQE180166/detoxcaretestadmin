@@ -88,10 +88,6 @@ const BlogDetail: React.FC<BlogDetailProps> = ({ blog, onBack }) => {
                   </span>
                 </p>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Biểu cảm</p>
-                <p className="font-medium">{blog.emojis}</p>
-              </div>
             </div>
           </div>
 
